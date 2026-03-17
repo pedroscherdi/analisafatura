@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AnalisaFatura</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4fa;color:#0d1e3a;min-height:100vh}
+header{background:linear-gradient(135deg,#0d2d6b 0%,#1a52b8 100%);color:#e8f0ff;padding:20px 32px;display:flex;align-items:center;gap:14px;box-shadow:0 2px 16px rgba(13,45,107,.3)}
+.bolt{width:36px;height:36px;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.brand{font-size:20px;font-weight:800;letter-spacing:-.3px}
+.brand span{color:#7eb8ff}
+header p{font-size:11px;color:rgba(255,255,255,.55);margin-top:2px}
+main{max-width:1020px;margin:0 auto;padding:32px 20px 80px}
+.drop-zone{border:2px dashed #9ab8e8;border-radius:14px;padding:48px 32px;text-align:center;cursor:pointer;transition:all .2s;background:#f7faff;margin-bottom:24px}
+.drop-zone:hover,.drop-zone.over{border-color:#1a52b8;background:#eef4ff}
+.drop-icon{font-size:44px;display:block;margin-bottom:14px}
+.drop-zone h2{font-size:18px;font-weight:600;margin-bottom:6px;color:#0d2d6b}
+.drop-zone p{font-size:13px;color:#6b8ab0;margin-bottom:20px}
+#fileInput{display:none}
+.btn{display:inline-block;background:#1a52b8;color:#fff;padding:11px 24px;border-radius:8px;font-size:14px;font-weight:600;border:none;cursor:pointer;transition:background .2s}
+.btn:hover{background:#0d3d96}
+.status{display:none;align-items:center;gap:10px;background:#f0f6ff;border:1px solid #c0d4f0;border-radius:10px;padding:12px 16px;font-size:13px;color:#2a4a80;margin-bottom:16px}
+.status.on{display:flex}
+.spin{width:18px;height:18px;border:2px solid #c0d4f0;border-top-color:#1a52b8;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err{display:none;background:#fdeaea;border:1px solid #f0c0c0;border-radius:8px;padding:12px 16px;font-size:13px;color:#b02020;margin-bottom:14px}
+.err.on{display:block}
+#result{display:none}
+#result.on{display:block}
+.file-bar{background:linear-gradient(135deg,#0d2d6b,#1a52b8);color:#e8f0ff;border-radius:10px;padding:11px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.file-bar span{font-size:13px;font-family:monospace;opacity:.6}
+.file-bar strong{font-size:14px}
+.btn-novo{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#e8f0ff;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer}
+.btn-novo:hover{background:rgba(255,255,255,.22)}
+/* GRID */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:12px}
+/* CARD */
+.card{background:#fff;border:1px solid #d0e0f5;border-radius:11px;overflow:hidden;animation:up .3s ease;box-shadow:0 1px 6px rgba(13,45,107,.06)}
+@keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card-head{background:#f0f6ff;border-bottom:1px solid #d0e0f5;padding:9px 14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ch-icon{font-size:13px}
+.ch-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#1a3d80}
+.ch-sub{font-size:10px;color:#8aabcc;margin-left:auto;font-style:italic}
+.card.ga .card-head{background:#e8f0fc;border-bottom-color:#b8d0f0}
+.card.ga .ch-title{color:#0d2d6b}
+.card.benef .card-head{background:#e6f4ea;border-bottom-color:#b0d8b8}
+.card.benef .ch-title{color:#1a6a2a}
+.card.imp .card-head{background:#edf2ff;border-bottom-color:#b8c8f0}
+.card.imp .ch-title{color:#2a3a8a}
+/* FIELD */
+.field{border-bottom:1px solid #e8f0fa;transition:background .12s;cursor:default}
+.field:last-child{border-bottom:none}
+.field:hover{background:#f4f8ff}
+.fm{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:7px 14px}
+.fk{font-size:12px;color:#3a5a80;display:flex;align-items:center;gap:4px;flex:1}
+.fv{font-family:'Courier New',monospace;font-size:12.5px;color:#0d1e3a;text-align:right;font-weight:700;white-space:nowrap;flex-shrink:0}
+.fv.money{color:#1a52b8}.fv.alert{color:#b02020}.fv.ok{color:#1a6a2a}.fv.warn{color:#8a5a00}.fv.blue{color:#0d2d6b}.fv.muted{color:#aac0d8;font-weight:400;font-style:italic}
+.ftip{display:none;padding:5px 14px 9px;font-size:11px;color:#5a7a9a;line-height:1.5;background:#f7fbff;border-top:1px dashed #d0e4f5}
+.field:hover .ftip{display:block}
+/* SEPARATOR */
+.fsep{padding:4px 14px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#8aaac8;background:#eef4fc;border-bottom:1px solid #d8eaf8}
+.fsep.alert{color:#b02020;background:#fff0f0}
+.fsep.ok{color:#1a6a2a;background:#f0f8f2}
+.fsep.blue{color:#0d2d6b;background:#e8f0fc}
+/* info badge */
+.ii{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:#c8dcf4;color:#2a5a90;font-size:9px;font-weight:700;flex-shrink:0;user-select:none}
+/* sub-detalhe indentado */
+.field .fk span.sub-indent,.field[data-sub] .fk{padding-left:10px}
+.field .fm .fk:first-child:not(:only-child) span{opacity:.85}
+.field.sub-row{background:#f7fbff;border-bottom:1px dashed #d8eaf8}
+.field.sub-row:last-child{border-bottom:none}
+.field.sub-row .fm{padding-left:26px}
+.field.sub-row .fk{color:#5a80a8;font-size:11.5px}
+/* bandeiras */
+.bdg{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.bdg-g{background:#e0f0e4;color:#1a6a2a}.bdg-r{background:#fdeaea;color:#b02020}.bdg-y{background:#fdf3d8;color:#8a5a00}.bdg-b{background:#e8f0fc;color:#0d2d6b}.bdg-p{background:#f0e8fc;color:#6a1a9a}
+/* alertas */
+.ab{border-left:4px solid;border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:9px;font-size:12.5px;line-height:1.5}
+.ab strong{display:block;margin-bottom:2px;font-size:13px}
+.ab.red{border-color:#d03030;background:#fdeaea;color:#b02020}
+.ab.green{border-color:#2a8a3a;background:#e0f4e4;color:#1a5a2a}
+.ab.blue{border-color:#1a52b8;background:#e8f0fc;color:#0d2d6b}
+.ab.warn{border-color:#b07a10;background:#fdf3d8;color:#8a5a00}
+/* histograma */
+.hist-row{display:flex;align-items:center;gap:8px;padding:6px 14px;border-bottom:1px solid #e8f0fa}
+.hist-row:last-child{border-bottom:none}
+.hm{font-size:11px;font-family:monospace;color:#8aaac8;width:52px;flex-shrink:0}
+.ht{flex:1;height:5px;background:#d8eaf8;border-radius:3px;overflow:hidden}
+.hb{height:100%;border-radius:3px;background:#9ab8d8;transition:width .8s ease}
+.hb.atual{background:#1a52b8}
+.hn{font-family:monospace;font-size:11px;color:#3a5a80;width:38px;text-align:right;flex-shrink:0}
+.hmed{font-family:monospace;font-size:10px;color:#9ab8d8;width:56px;text-align:right;flex-shrink:0}
+.raw-toggle{background:none;border:1px solid #c8daf0;border-radius:8px;padding:8px 16px;font-size:12px;color:#6a8ab0;cursor:pointer;margin-top:8px;display:block;width:100%;text-align:left;transition:all .2s}
+.raw-toggle:hover{border-color:#7aaad0;color:#2a4a80}
+.raw-box{display:none;background:#0d1e3a;color:#7eb8ff;font-family:'Courier New',monospace;font-size:11px;line-height:1.6;padding:16px;border-radius:8px;margin-top:8px;white-space:pre-wrap;word-break:break-all;max-height:320px;overflow-y:auto}
+.raw-box.on{display:block}
+footer{text-align:center;padding:18px;font-size:11px;color:#8aaac8;border-top:1px solid #d0e4f5;max-width:1020px;margin:0 auto}
+
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:2px solid #d0e4f5;margin-bottom:28px;background:#f0f6ff;border-radius:10px 10px 0 0;overflow:hidden}
+.tab-btn{flex:1;padding:13px 18px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;color:#6a8ab0;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px}
+.tab-btn:hover{background:#e8f0ff;color:#1a3d80}
+.tab-btn.active{background:#fff;color:#0d2d6b;border-bottom:2px solid #1a52b8}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* WELCOME SCREEN */
+.welcome-hero{text-align:center;padding:40px 20px 32px;border-bottom:1px solid #d8eaf8;margin-bottom:32px}
+.welcome-hero .bolt-big{width:64px;height:64px;background:linear-gradient(135deg,#1a52b8,#3a80e0);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 18px;box-shadow:0 4px 20px rgba(26,82,184,.3)}
+.welcome-hero h2{font-size:26px;font-weight:800;margin-bottom:8px;color:#0d2d6b}
+.welcome-hero h2 span{color:#1a52b8}
+.welcome-hero p{font-size:15px;color:#4a6a90;max-width:540px;margin:0 auto;line-height:1.6}
+.welcome-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:28px}
+.wcard{background:#fff;border:1px solid #d0e4f5;border-radius:12px;padding:20px 18px;box-shadow:0 1px 6px rgba(13,45,107,.05)}
+.wcard-icon{font-size:26px;margin-bottom:10px}
+.wcard h3{font-size:14px;font-weight:700;margin-bottom:5px;color:#0d2d6b}
+.wcard p{font-size:12.5px;color:#5a7a9a;line-height:1.55}
+.lgpd-box{background:#eef6ff;border:1px solid #a8caf0;border-radius:12px;padding:20px 22px;margin-bottom:20px}
+.lgpd-box .lgpd-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.lgpd-box .lgpd-icon{width:32px;height:32px;background:#1a52b8;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.lgpd-box h3{font-size:14px;font-weight:700;color:#0d2d6b}
+.lgpd-box p{font-size:12.5px;color:#2a4a7a;line-height:1.6}
+.lgpd-box ul{margin:8px 0 0 16px;font-size:12.5px;color:#2a4a7a;line-height:1.8}
+.mission-box{background:#f0f6ff;border:1px solid #b8d0f0;border-radius:12px;padding:20px 22px;margin-bottom:28px}
+.mission-box h3{font-size:14px;font-weight:700;color:#0d2d6b;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.mission-box p{font-size:12.5px;color:#2a4a7a;line-height:1.65}
+.btn-start{display:inline-flex;align-items:center;gap:9px;background:linear-gradient(135deg,#1a52b8,#3a80e0);color:#fff;padding:13px 32px;border-radius:10px;font-size:15px;font-weight:600;border:none;cursor:pointer;transition:all .2s;margin-top:4px;box-shadow:0 3px 12px rgba(26,82,184,.35)}
+.btn-start:hover{background:linear-gradient(135deg,#0d3d96,#1a60c0);box-shadow:0 4px 16px rgba(26,82,184,.45)}
+</style>
+</head>
+<body>
+<header>
+  <div class="bolt">📊</div>
+  <div>
+    <div class="brand">Analisa<span>Fatura</span></div>
+    <p>100% offline · sem internet · passe o mouse sobre cada campo para ver a explicação</p>
+  </div>
+</header>
+<main>
+  <!-- TABS NAV -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-inicio" onclick="switchTab('inicio')">🏠 Início</button>
+    <button class="tab-btn" id="tab-leitor" onclick="switchTab('leitor')">📊 Analisar Fatura</button>
+  </div>
+
+  <!-- TAB: INÍCIO -->
+  <div class="tab-pane active" id="pane-inicio">
+
+    <div class="welcome-hero">
+      <div class="bolt-big">⚡</div>
+      <h2><span>Analisa</span>Fatura</h2>
+      <p>Uma ferramenta gratuita e acessível para que qualquer pessoa possa entender, de forma simples e clara, o que está sendo cobrado na sua fatura de energia elétrica.</p>
+    </div>
+
+    <div class="mission-box">
+      <h3>🎯 Nossa missão</h3>
+      <p>A fatura de energia é um documento técnico e cheio de siglas — ICMS, TUSD, TE, DIC, FIC, UFER — que a maioria das pessoas nunca teve oportunidade de aprender. Isso gera cobranças indevidas não contestadas, benefícios tarifários não solicitados e consumo difícil de monitorar.</p>
+      <p style="margin-top:9px">Acreditamos que <strong>toda pessoa tem direito de entender o que está pagando</strong>. Este leitor traduz automaticamente sua fatura, explica cada campo em linguagem simples e aponta alertas e oportunidades de economia — democratizando o acesso à informação energética.</p>
+    </div>
+
+    <div class="welcome-cards">
+      <div class="wcard">
+        <div class="wcard-icon">🔍</div>
+        <h3>Entenda cada cobrança</h3>
+        <p>Passe o mouse sobre qualquer campo e veja uma explicação em linguagem simples do que significa aquele valor.</p>
+      </div>
+      <div class="wcard">
+        <div class="wcard-icon">🏛️</div>
+        <h3>Impostos detalhados</h3>
+        <p>Descubra exatamente quanto você paga de ICMS, PIS e COFINS — e qual percentual da sua fatura são tributos.</p>
+      </div>
+      <div class="wcard">
+        <div class="wcard-icon">🎁</div>
+        <h3>Benefícios tarifários</h3>
+        <p>Verifique se você tem Tarifa Social, Rural/Irrigante ou outros descontos que podem estar sendo aplicados (ou que deveriam estar).</p>
+      </div>
+      <div class="wcard">
+        <div class="wcard-icon">📈</div>
+        <h3>Histórico de consumo</h3>
+        <p>Visualize a evolução do seu consumo mês a mês para identificar variações e oportunidades de economia.</p>
+      </div>
+      <div class="wcard">
+        <div class="wcard-icon">⚠️</div>
+        <h3>Alertas automáticos</h3>
+        <p>O sistema detecta ultrapassagem de demanda, bandeiras tarifárias, faturas em atraso e outros pontos de atenção.</p>
+      </div>
+      <div class="wcard">
+        <div class="wcard-icon">🌐</div>
+        <h3>Todas as distribuidoras</h3>
+        <p>Compatível com CEEE, Equatorial, CPFL, Cemig, Enel, Copel, Coelba, CELPE e demais distribuidoras brasileiras.</p>
+      </div>
+    </div>
+
+    <div class="lgpd-box">
+      <div class="lgpd-head">
+        <div class="lgpd-icon">🔒</div>
+        <h3>Privacidade e conformidade com a LGPD</h3>
+      </div>
+      <p>Este aplicativo foi desenvolvido com <strong>total respeito à Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD)</strong>. Sua privacidade é uma prioridade, não uma formalidade.</p>
+      <ul>
+        <li><strong>Nenhum dado sai do seu dispositivo.</strong> Todo o processamento é feito localmente no seu navegador, sem servidores externos.</li>
+        <li><strong>Nenhum arquivo é armazenado.</strong> O PDF da sua fatura não é salvo em nenhum lugar — ele existe apenas na memória enquanto você usa a ferramenta.</li>
+        <li><strong>Sem rastreamento.</strong> Não há cookies de rastreio, analytics de terceiros nem coleta de dados pessoais de qualquer tipo.</li>
+        <li><strong>Sem cadastro.</strong> Você não precisa criar conta, informar e-mail ou qualquer dado pessoal para usar a ferramenta.</li>
+        <li><strong>Código transparente.</strong> Esta página é um arquivo HTML único, auditável por qualquer pessoa.</li>
+      </ul>
+    </div>
+
+    <div style="text-align:center;padding:8px 0 16px">
+      <button class="btn-start" onclick="switchTab('leitor')">Começar a ler minha fatura →</button>
+    </div>
+
+  </div>
+
+  <!-- TAB: LEITOR -->
+  <div class="tab-pane" id="pane-leitor">
+  <div class="drop-zone" id="dropZone">
+    <span class="drop-icon">📄</span>
+    <h2>Arraste o PDF da fatura aqui</h2>
+    <p>PDF digital (copiável) — CEEE, Equatorial, CPFL, Cemig, Enel, Copel, Coelba, CELPE e outras distribuidoras</p>
+    <button class="btn" onclick="event.stopPropagation();document.getElementById('fileInput').click()">Selecionar PDF</button>
+    <input type="file" id="fileInput" accept=".pdf">
+  </div>
+  <div class="status" id="status"><div class="spin"></div><span id="statusMsg">Lendo PDF...</span></div>
+  <div class="err" id="errBox"></div>
+  <div id="result">
+    <div class="file-bar">
+      <div><strong id="fbName"></strong><span id="fbSize"></span></div>
+      <button class="btn-novo" onclick="novo()">← Nova fatura</button>
+    </div>
+    <div id="alertas"></div>
+    <div id="cards"></div>
+    <button class="raw-toggle" onclick="toggleRaw()">▸ Ver texto bruto extraído do PDF</button>
+    <div class="raw-box" id="rawBox"></div>
+  </div>
+  </div><!-- /pane-leitor -->
+</main>
+<footer>Nenhum dado sai do seu computador · Processado 100% localmente via pdf.js · Conforme LGPD · AnalisaFatura</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ══════════════════════════════════════════════════════
+// TOOLTIPS
+// ══════════════════════════════════════════════════════
+const T={
+  // identif
+  uc:'Número da Unidade Consumidora — o "CPF" da sua ligação. Use em qualquer contato com a distribuidora.',
+  grupo:'Grupo A = média/alta tensão (indústria, agro, grandes comércios): pagam demanda (kW) + consumo (kWh).\nGrupo B = baixa tensão (residências, pequenos comércios): pagam só kWh.',
+  subgrupo:'A2=88–138kV · A3=69kV · A3a=30–44kV · A4=2,3–25kV · AS=subterrâneo.\nQuanto menor a tensão de fornecimento, maior o custo de transformação e geralmente maior a tarifa.',
+  classe:'Define a tabela tarifária aplicada: Residencial, Comercial, Industrial, Rural, Poder Público, Serviço Público, Iluminação Pública.',
+  tipo_ligacao:'Monofásico=1 fase (casas simples, até ~30A). Bifásico=2 fases. Trifásico=3 fases (indústrias, comércios maiores, propriedades com muita carga).',
+  tensao:'Tensão nominal do seu ponto de entrega. Residências: 127 V ou 220 V. Média tensão: 13,8 kV, 34,5 kV etc.',
+  tarifa:'Modalidade contratada:\n• Convencional: tarifa única, sem distinção de horário.\n• Branca (B): preços diferentes ponta/intermediário/fora ponta — vantajosa se você desloca consumo.\n• Verde (A): demanda única + consumo diferenciado ponta/FP.\n• Azul (A): demanda e consumo diferenciados ponta/FP.',
+  // fatura
+  p_cons_ini:'P.Cons.Ini = Período de Consumo Inicial: data de início do período faturado (leitura anterior do medidor).',
+  p_cons_fin:'P.Cons.Fin = Período de Consumo Final: data de fim do período faturado (leitura atual do medidor).',
+  data_lp:'Data da Leitura/Processamento: quando a fatura foi processada pelo sistema da distribuidora.',
+  data_v:'Data de Vencimento: limite para pagamento sem multa. Após: multa 2% + juros ~1%/mês + correção monetária.',
+  numero_dias:'Dias entre as duas leituras (tipicamente 28–32 dias). Faturas com mais dias costumam ter valores maiores — compare pela média diária.',
+  bandeira:'Sistema de bandeiras tarifárias — custo extra por kWh conforme nível dos reservatórios hidrelétricos:\n🟢 Verde: sem acréscimo.\n🟡 Amarela: +R$0,01874/kWh.\n🔴 Vermelha 1: +R$0,04463/kWh.\n🔴 Vermelha 2: +R$0,07877/kWh.\n🟣 Escassez: +R$0,14200/kWh.',
+  outros_creditos:'Créditos de natureza diversa aplicados nesta fatura (ex: compensação por interrupção, devolução de valores, créditos de geração distribuída de períodos anteriores).',
+  outros_custos:'Cobranças diversas não enquadradas nos itens padrão (ex: religação, troca de medidor, serviços solicitados).',
+  // consumo
+  kwh_p:'kWh consumidos no horário de PONTA (geralmente 17h–22h em dias úteis).\nTarifa mais cara — pode ser 3 a 8× maior que fora de ponta. Deslocar cargas para outros horários é a principal alavanca de economia para clientes Grupo A.',
+  kwh_fp:'kWh consumidos FORA DE PONTA (demais horários).\nTarifa mais barata — incentiva operação de equipamentos pesados fora do período 17h–22h.',
+  kwh_b:'kWh na modalidade de Geração Distribuída (excedente injetado compensado). Energia "bancada" pelo sistema de compensação.',
+  kwh_total:'kWh = quilowatt-hora. Unidade de medida de energia.\n1 kWh = aparelho de 1.000 W ligado por 1 hora.\nReferências: geladeira≈35/mês, chuveiro elétrico≈100/mês, ar-condicionado 9.000 BTU≈90/mês.',
+  media_diaria:'Média diária de consumo (kWh/dia). Melhor métrica para comparar meses com períodos de leitura diferentes.',
+  // demanda
+  kw_p:'Demanda na PONTA (kW): maior pico de potência em 15 minutos durante o horário de ponta do mês.',
+  kw_fp:'Demanda FORA DE PONTA (kW): maior pico de potência em 15 minutos fora do horário de ponta.',
+  kw_p_u:'Demanda na Ponta com Ultrapassagem: valor que excedeu a demanda contratada na ponta.',
+  kw_fp_u:'Demanda FP com Ultrapassagem: valor que excedeu a demanda contratada fora de ponta.',
+  dem_contratada:'Demanda Contratada (kW): potência máxima reservada junto à distribuidora.\nVocê paga pela reserva mesmo sem usar — como alugar um espaço.\nNegociar o valor certo evita: pagar por capacidade ociosa (se muito alta) ou multa de ultrapassagem (se muito baixa).',
+  dem_medida:'Demanda Medida (kW): maior valor de potência registrado em qualquer intervalo de 15 minutos do mês.\nSe superar a contratada → multa de ultrapassagem (tarifa 2× a normal).',
+  dem_faturada:'Demanda Faturada (kW): valor efetivamente cobrado.\nGeralmente o maior entre a demanda medida e o mínimo faturável (normalmente 70–100% da contratada).',
+  ultrapassagem:'⚠ ULTRAPASSAGEM: demanda medida superou a contratada.\nTarifa de ultrapassagem = DOBRO da tarifa normal de demanda.\nSolução: aumentar a demanda contratada ou escalonar a partida de equipamentos grandes (motores, ar-condicionado industrial).',
+  ufer:'UFER = Unidade de Faturamento de Energia Reativa.\nCobrada quando o fator de potência fica abaixo de 0,92. Indica equipamentos com bobinas/capacitores mal compensados (motores, transformadores).\nSolução: instalar banco de capacitores para correção do fator de potência.',
+  dmcr:'DMCR = Demanda Máxima de Consumo Reativo (kVAr). Representa a demanda de energia reativa registrada, usada para cálculo de UFER.',
+  ufdr:'UFDR = Unidade de Faturamento de Demanda Reativa. Similar à UFER mas aplicada à demanda reativa excedente. Cobrada quando a demanda reativa supera o limite regulatório.',
+  // geração distribuída
+  geracao:'Energia gerada pela sua usina própria (solar fotovoltaico, eólica, cogeração, PCH). Abatida do consumo total antes do faturamento.',
+  energia_injetada:'Energia gerada além do que você consumiu, injetada na rede para outros consumidores.\nGera créditos compensáveis por até 60 meses (Sistema de Compensação REN 482/2012 ANEEL).',
+  cred_gerados:'Créditos de energia gerados neste mês pela injeção de excedente na rede.',
+  cred_usados:'Créditos de geração distribuída compensados nesta fatura, reduzindo o valor a pagar.',
+  saldo_mes:'Saldo de créditos gerado neste mês (diferença entre gerado e compensado).',
+  saldo_acumulado:'Saldo total acumulado de créditos de energia disponíveis para faturas futuras.',
+  saldo_expirar:'Créditos próximos do vencimento (créditos expiram após 60 meses da geração).',
+  geracao_total_periodo:'Total de energia gerada pela usina própria no período faturado.',
+  // encargos
+  cip:'CIP = Contribuição para Iluminação Pública.\nDefinida pelo município, obrigatória para todos os consumidores.\nNão é imposto federal — vai para a prefeitura manter os postes de rua.',
+  multa:'Multa de 2% aplicada por atraso no pagamento de fatura anterior.',
+  juros:'Juros de mora por atraso: ~1%/mês proporcional aos dias de atraso.',
+  correcao:'Correção monetária sobre o valor em atraso.',
+  multa_cap_emerg:'Multa por consumo no período de Crise Hídrica / Capacidade Emergencial declarada pelo governo. Cobrada quando o consumo supera a meta estabelecida durante crises de energia.',
+  cap_emergencial:'Encargo de Capacidade Emergencial: cobrança relacionada ao Programa Emergencial de Redução do Consumo de Energia Elétrica.',
+  // compensações DIC/FIC/DMIC
+  cu_dic_mensal:'CU-DIC-Mensal = Compensação por ultrapassagem do indicador DIC mensal. Crédito automático se sua energia ficou cortada por mais horas que o padrão ANEEL no mês.',
+  cu_dic_trim:'CU-DIC-Trimestral = Compensação por ultrapassagem do DIC no trimestre.',
+  cu_dic_anual:'CU-DIC-Anual = Compensação por ultrapassagem do DIC no ano.',
+  cu_fic_mensal:'CU-FIC-Mensal = Compensação por ultrapassagem do indicador FIC mensal (número de interrupções).',
+  cu_fic_trim:'CU-FIC-Trimestral = Compensação por ultrapassagem do FIC no trimestre.',
+  cu_dmic:'CU-DMIC = Compensação por ultrapassagem da duração máxima de uma única interrupção.',
+  cu_dicri:'CU-DICRI = Compensação por ultrapassagem do DIC Individualizado (para casos específicos de medição individual).',
+  cred_prox_fat:'Crédito a ser aplicado na próxima fatura (compensações de qualidade, geração distribuída ou outros créditos gerados neste ciclo).',
+  saldo_anterior:'Saldo de créditos vindo de faturas anteriores (geração distribuída, compensações etc.).',
+  // impostos
+  icms_bc:'ICMS — Base de Cálculo: valor sobre o qual o ICMS incide. Inclui TUSD+TE+encargos setoriais; geralmente exclui CIP.',
+  icms_ae:'ICMS — Alíquota Estadual (%): varia por estado. RS=30%, SP=25%, MG=30%, PR=29%, SC=25%, RJ=32%, BA=25%.',
+  icms_ad:'ICMS — Alíquota com Dedução (se houver isenção parcial ou substituição tributária).',
+  icms_v:'ICMS — Valor em reais cobrado nesta fatura. Imposto ESTADUAL — vai para o governo do seu estado.',
+  pis_ali:'PIS — Alíquota: 0,65% para energia elétrica. Federal. Financia o FAT (Fundo de Amparo ao Trabalhador / seguro-desemprego).',
+  pis_v:'PIS — Valor em reais. Imposto federal.',
+  cofins_ali:'COFINS — Alíquota: 3,0% para energia elétrica. Federal. Financia INSS e saúde pública.',
+  cofins_v:'COFINS — Valor em reais. Imposto federal.',
+  pis_cofins_a:'PIS+COFINS — Alíquota combinada (0,65% + 3,0% = 3,65%) para energia elétrica residencial/comercial.',
+  pis_cofins_v:'PIS+COFINS — Valor total cobrado combinado.',
+  total_imp:'Total de impostos (ICMS + PIS + COFINS). No Brasil, tributos chegam a 30–40% da conta de luz.',
+  pct_imp:'Percentual do valor total da fatura que corresponde a impostos.',
+  // indicadores qualidade
+  i_dic:'DIC = Duração das Interrupções Individuais (horas/período).\nSe o realizado superar o padrão → compensação financeira automática na próxima fatura, sem precisar solicitar.',
+  i_fic:'FIC = Frequência das Interrupções Individuais (número de vezes).\nSe o realizado superar o padrão → compensação automática.',
+  i_dmic:'DMIC = Duração Máxima de Interrupção Contínua (horas).\nLimite por evento único. Se ultrapassado → compensação.',
+  i_dicri:'DICRI = DIC Relativo Individual. Indicador aplicado em instalações com medição individualizada em condomínios/shoppings.',
+  i_eusd:'EUSD = Encargo de Uso do Sistema de Distribuição realizado. Valor fixo pelo acesso à rede, independente do consumo.',
+  // bandeira consumo detalhado
+  adicional_am:'Adicional Amarelo: valor extra cobrado pelo kWh consumido quando a bandeira estava Amarela no período.',
+  adicional_verm1:'Adicional Vermelho 1: valor extra quando bandeira estava Vermelha 1.',
+  adicional_verm2:'Adicional Vermelho 2: valor extra quando bandeira estava Vermelha 2.',
+  cred_sub_tax:'CRED_SUB_TAX = Crédito de Subtributação: estorno de valores pagos a mais por diferença de alíquota ou regime tributário aplicado incorretamente.',
+  sub_tax:'SUB_TAX = Subtributação: ajuste tributário por enquadramento diferente do originalmente aplicado.',
+  // benefícios
+  benef_irrigante:'BENEFÍCIO RURAL/IRRIGANTE (REN 414 ANEEL)\nProdutor rural com sistema de irrigação ou aquicultura em horário noturno tem 50% de desconto na TUSD e TE durante o período de irrigação.\nPrecisa de habilitação prévia na distribuidora. Pode reduzir drasticamente a conta rural.',
+  benef_baixa_renda:'TARIFA SOCIAL DE ENERGIA ELÉTRICA\nDesconto progressivo para famílias no CadÚnico:\n• Até 30 kWh: 65% de desconto\n• 31–100 kWh: 40%\n• 101–220 kWh: 10%\n• Acima de 220: sem desconto.',
+  benef_cooperativa:'Cooperativa de eletrificação rural com tarifa diferenciada aprovada pela ANEEL.',
+  // encargos setoriais
+  ess:'ESS = Encargos de Serviços do Sistema. Cobre o acionamento de usinas térmicas de reserva quando as hidrelétricas não são suficientes para manter a estabilidade da rede nacional.',
+  ers:'ERS = Encargo de Reserva de Capacidade. Mantém usinas de reserva disponíveis para emergências no sistema elétrico.',
+  proinfa:'PROINFA = Programa de Incentivo às Fontes Alternativas. Financia energia eólica, biomassa e PCHs (pequenas centrais hidrelétricas).',
+  cde:'CDE = Conta de Desenvolvimento Energético. Financia Tarifa Social (baixa renda), eletrificação rural e fontes alternativas.',
+  // TUSD/TE
+  consumo_tusd:'TUSD = Tarifa de Uso do Sistema de Distribuição.\nO "pedágio" da rede: paga pelo uso de postes, cabos, transformadores e subestações.\nIndepende de quem gera a energia — é cobrado pela distribuidora local.\n≈50–60% do custo do kWh antes dos impostos.',
+  consumo_te:'TE = Tarifa de Energia.\nCusto da energia elétrica em si — o "combustível" consumido.\nJuntos TUSD + TE = custo real do kWh.',
+  consumo_tusd_p:'TUSD no horário de PONTA (17h–22h dias úteis). Tarifa muito mais cara que fora de ponta.',
+  consumo_te_p:'TE no horário de PONTA. Custo da energia durante o pico da rede.',
+  consumo_tusd_fp:'TUSD FORA DE PONTA: demais horários. Tarifa mais barata.',
+  consumo_te_fp:'TE FORA DE PONTA: custo da energia fora do pico.',
+  loc_equip:'Locação de Equipamentos: cobrança mensal pela locação de medidor ou equipamento de medição fornecido pela distribuidora.',
+};
+
+
+// ══════════════════════════════════════════════════════
+// DRAG & DROP / FILE
+// ══════════════════════════════════════════════════════
+const dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');const f=[...e.dataTransfer.files].find(f=>f.type==='application/pdf');if(f)processar(f)});
+dz.addEventListener('click',()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change',e=>{if(e.target.files[0])processar(e.target.files[0])});
+function setStatus(m){document.getElementById('status').className='status on';document.getElementById('statusMsg').textContent=m}
+function hideStatus(){document.getElementById('status').className='status'}
+function setErr(m){const b=document.getElementById('errBox');if(m){b.textContent=m;b.className='err on'}else b.className='err'}
+function novo(){document.getElementById('fileInput').value='';document.getElementById('dropZone').style.display='block';document.getElementById('result').className='';document.getElementById('cards').innerHTML='';document.getElementById('alertas').innerHTML='';setErr('')}
+function toggleRaw(){const b=document.getElementById('rawBox');b.classList.toggle('on');document.querySelector('.raw-toggle').textContent=b.classList.contains('on')?'▾ Ocultar texto bruto':'▸ Ver texto bruto extraído do PDF'}
+
+async function processar(file){
+  document.getElementById('dropZone').style.display='none';
+  document.getElementById('result').className='';
+  document.getElementById('cards').innerHTML='';
+  document.getElementById('alertas').innerHTML='';
+  setErr('');setStatus('Lendo PDF...');
+  try{
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    let texto='';
+    for(let i=1;i<=pdf.numPages;i++){
+      setStatus('Lendo página '+i+' de '+pdf.numPages+'...');
+      const pg=await pdf.getPage(i);
+      const ct=await pg.getTextContent();
+      texto+=ct.items.map(it=>it.str).join(' ')+'\n';
+    }
+    if(!texto.trim())throw new Error('PDF sem texto copiável (scan/imagem). Use o PDF digital emitido pela distribuidora.');
+    hideStatus();
+    document.getElementById('fbName').textContent=file.name;
+    document.getElementById('fbSize').textContent=' · '+(file.size/1024).toFixed(0)+' KB';
+    document.getElementById('rawBox').textContent=texto;
+    renderCampos(extrair(texto));
+    document.getElementById('result').className='on';
+  }catch(e){
+    hideStatus();
+    document.getElementById('dropZone').style.display='block';
+    setErr('Erro: '+e.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// EXTRAÇÃO — cobre todos os campos do schema
+// ══════════════════════════════════════════════════════
+function extrair(t){
+  const s=t.replace(/\s+/g,' ');
+  function get(ps){for(const p of ps){const m=s.match(p);if(m&&m[1]&&m[1].trim())return m[1].trim()}return null}
+  function money(ps){const v=get(ps);if(!v)return null;const n=parseFloat(v.replace(/\./g,'').replace(',','.'));return isNaN(n)?null:n}
+  function num(ps){const v=get(ps);if(!v)return null;const n=parseFloat(v.replace(',','.'));return isNaN(n)?null:n}
+  function has(ps){for(const p of ps)if(s.match(p))return true;return false}
+
+  // ── IDENTIFICAÇÃO ──
+  const ident={
+    nome:        get([/(?:Nome|Consumidor|Cliente)[:\s]+([A-ZÁÉÍÓÚÀÂÊÔÃÕÇ][A-Za-záéíóúàâêôãõç\s]{5,50})(?=\s+(?:CPF|CNPJ|Rua|Av|R\.|End))/i]),
+    cpf:         get([/CPF[:\s*\-]+(\d{3}[\.\*]+\d{3}[\.\*]+\d{3}[\-\*]+\d{2})/i,/CPF[:\s]+([\d\.\-\*]+)/i]),
+    endereco:    get([/(Rua|Av\.|Avenida|Al\.|Alameda|Travessa|Rod\.)[^\n]{5,80}(?=\s+\d{5}-\d{3})/i]),
+    cep:         get([/CEP[:\s]*(\d{5}-\d{3})/i,/(\d{5}-\d{3})/]),
+    cidade:      get([/([A-Za-záéíóúàâêôãõç][A-Za-záéíóúàâêôãõç\s]{2,28})\s*-\s*(RS|SP|RJ|MG|PR|SC|BA|PE|CE|GO|MT|MS|AM|PA|MA|PI|RN|PB|AL|SE|ES|TO|RO|AC|AP|RR|DF)\s/]),
+    uc:          get([/(?:N[úu]mero da UC|Unidade Consumidora|N[°º]\s*UC)[:\s#]*(\d{5,12})/i,/\bUC\s*[:#nº]*\s*(\d{6,10})\b/i]),
+    classe:      get([/(?:Classifica[çc][aã]o|Classe)[:\s]+([A-Za-záéíóú\/\s]{3,40}?)(?=\s{2,}|\n)/i]),
+    tensao:      get([/(?:Tens[aã]o Nominal|Tens[aã]o)[:\s]+(\d{2,3}[\-\/]\d{2,3}|\d{1,5}\s*(?:kV|V))/i]),
+    tipo_ligacao:get([/(MONOF[AÁ]SICO|BIF[AÁ]SICO|TRIF[AÁ]SICO)/i]),
+    tarifa:      get([/(?:Tipo de Tarifa|Modalidade Tarif[aá]ria|Modalidade)[:\s]+([A-Z0-9_\/\s]{2,30}?)(?=\s{2,}|\n)/i]),
+    grupo:       get([/\bGrupo[:\s]+([AB]\d?)\b/i,/\b(Grupo\s+[AB]\d?)\b/i]),
+    subgrupo:    get([/\bSubgrupo[:\s]+([AB]\d[A-Za-z]?)\b/i]),
+    parceiro:    get([/Parceiro de Neg[óo]cio[:\s]+(\d{7,12})/i]),
+  };
+
+  // ── PERÍODO / FATURA ──
+  const periodo={
+    p_cons_ini:      get([/(?:P\.?\s*Cons\.?\s*Ini|Per[íi]odo\s+Ini|Leitura\s+Anterior)[:\s]+(\d{2}\/\d{2}\/\d{4})/i,/(?:Leitura Anterior|Leit\. Anterior)[:\s]+(\d{2}\/\d{2}\/\d{4})/i]),
+    p_cons_fin:      get([/(?:P\.?\s*Cons\.?\s*Fin|Per[íi]odo\s+Fin|Leitura\s+Atual)[:\s]+(\d{2}\/\d{2}\/\d{4})/i,/(?:Leitura Atual|Leit\. Atual)[:\s]+(\d{2}\/\d{2}\/\d{4})/i]),
+    data_lp:         get([/(?:Data\s+(?:de\s+)?Emiss[aã]o|Emiss[aã]o|Data\s+L\.?\s*P\.?)[:\s]+(\d{2}\/\d{2}\/\d{4})/i]),
+    data_v:          get([/(?:Vencimento|Venc\.)[:\s]+(\d{2}\/\d{2}\/\d{4})/i]),
+    referencia:      get([/(?:Conta m[eê]s|Refer[eê]ncia)[:\s]+(\d{2}\/\d{4})/i,/(\d{2}\/\d{4})\s*(?:Vencimento|Venc\.)/i]),
+    numero_dias:     num([/(\d{2})\s*dias?\s*(?:de consumo|faturado)/i,/N[°º]\s*de Dias?\s+(\d{2})/i]),
+    nota_fiscal:     get([/NOTA FISCAL N[°o]\.\s*(\d{7,10})/i,/(?:Nota Fiscal|NF)[:\s#nº°.]*(\d{7,10})/i]),
+    bandeira:        get([/(?:Band\.?\s*Tarif\.?|Periodos Band\.Tarif\.)[^:]*:\s*([A-Za-záéíóú]+(?:\s+\d)?)/i,/(Verde|Amarela|Vermelha\s*\d?|Escassez)/i]),
+    protocolo:       get([/Protocolo[:\s]+(\d{14,20})/i]),
+    proxima_leitura: get([/(?:Pr[óo]xima Leitura|Pr[óo]x\. Leitura)[:\s]+(\d{2}\/\d{2}\/\d{4})/i]),
+  };
+
+  // ── TOTAIS ──
+  const totais={
+    total:          money([/Total\s+a\s+pagar[:\s]+R?\$?\s*([\d\.]+,\d{2})/i,/Valor\s+do\s+Documento[:\s]+R?\$?\s*([\d\.]+,\d{2})/i,/\(=\)\s*Valor\s+Cobrado\s+([\d\.]+,\d{2})/i]),
+    outros_creditos:money([/Outros\s+Cr[eé]ditos?[^\d]*([\d\.]+,\d{2})/i]),
+    outros_custos:  money([/Outros\s+Custos?[^\d]*([\d\.]+,\d{2})/i]),
+  };
+
+  // ── HELPER: extrai linha da tabela de itens de fatura Equatorial-style ──
+  // Formato: "Label (kWh)   999,99   9,999999   9,999999   99,99   99,99   999,99"
+  // Ou:      "Label (kWh)   999,99   9,999999   Tarifa Unit   ...   Valor"
+  function itemFatura(labelRe){
+    const m=s.match(labelRe);
+    if(!m)return{qty:null,preco:null,valor:null};
+    // após o match, próximos números: qty (pode ter ponto mil), preco (6 dec), ..., valor final
+    const resto=s.slice(m.index+m[0].length);
+    const nums=resto.match(/^[\s\S]{0,10}?([\d\.]+,\d+)\s+([\d\.]+,\d{6})\s+[\d\.]+,\d{6}\s+[\d\.]+,\d{2}\s+[\d\.]+,\d{2}\s+([\d\.]+,\d{2})/);
+    if(nums){
+      return{
+        qty:parseFloat(nums[1].replace(/\./g,'').replace(',','.')),
+        preco:parseFloat(nums[2].replace(',','.')),
+        valor:parseFloat(nums[3].replace(/\./g,'').replace(',','.'))
+      };
+    }
+    // fallback: formato simplificado (só qty, tarifa, valor)
+    const nums2=resto.match(/^[\s\S]{0,10}?([\d\.]+,\d+)\s+([\d\.]+,\d+)\s+([\d\.]+,\d{2})\b/);
+    if(nums2){
+      return{
+        qty:parseFloat(nums2[1].replace(/\./g,'').replace(',','.')),
+        preco:parseFloat(nums2[2].replace(',','.')),
+        valor:parseFloat(nums2[3].replace(/\./g,'').replace(',','.'))
+      };
+    }
+    return{qty:null,preco:null,valor:null};
+  }
+
+  // ── KWH CONSUMO (P / FP / B) ──
+  const _iConsP  = itemFatura(/Consumo\s+Compensado\s+(?:NP|Ponta)\s*\(kWh\)/i);
+  const _iConsFP = itemFatura(/Consumo\s+Compensado\s+(?:FP|Fora)[^(]*\(kWh\)/i);
+  const _iConsRV = itemFatura(/Consumo\s+Reservado\s*\(kWh\)/i);
+
+  const kwh={
+    // Equatorial MA: "Consumo Ativo NP Reg ... 200,20 kWh" na tabela de medidor
+    p:    num([/Consumo\s+Ativo\s+NP\s+Reg[^k]*([\d\.]+,\d{2})\s*kWh/i,
+               /Consumo\s+Ponta\s+[^k]*([\d\.]+,\d{2})\s*kWh/i,
+               /CONS(?:UMO)?\s+(?:P\b|PONTA)[^\d]*(\d{1,6}(?:\.\d{3})*,\d{2})\s*kWh/i]),
+    fp:   num([/Consumo\s+Ativo\s+FP\s+Reg[^k]*([\d\.]+,\d{2})\s*kWh/i,
+               /Consumo\s+Fora\s+Ponta\s+[^k]*([\d\.]+,\d{2})\s*kWh/i,
+               /CONS(?:UMO)?\s+(?:FP|FORA)[^\d]*(\d{1,6}(?:\.\d{3})*,\d{2})\s*kWh/i]),
+    b:    num([/CONS(?:UMO)?\s+(?:B\b|BAIXA\s+TENS)[^\d]*(\d{2,6})\s*kWh/i]),
+    reservado: num([/Consumo\s+Ativo\s+RV\s+Reg[^k]*([\d\.]+,\d{2})\s*kWh/i,
+                    /Consumo\s+Reservado\s+[^k]*([\d\.]+,\d{2})\s*kWh/i]),
+    // bandeira amarela
+    p_am:    num([/KWH-P-am|Cons\.?\s+Ponta\s+Amarel[^\d]*(\d{2,6})/i]),
+    fp_am:   num([/KWH-FP-am|Cons\.?\s+FP\s+Amarel[^\d]*(\d{2,6})/i]),
+    b_am:    num([/KWH-B[_-]am|Cons\.?\s+Amarel[^\d]*(\d{2,6})/i]),
+    // bandeira vermelha
+    p_verm:  num([/KWH-P-verm|Cons\.?\s+Ponta\s+Verm[^\d]*(\d{2,6})/i]),
+    fp_verm: num([/KWH-FP-verm|Cons\.?\s+FP\s+Verm[^\d]*(\d{2,6})/i]),
+    b_verm:  num([/KWH-B[_-]verm|Cons\.?\s+Verm[^\d]*(\d{2,6})/i]),
+    total:   num([/kWh\s+[Tt]otal[^\d]*(\d{2,6})/i]),
+    media:   num([/Consumo\s+M[eé]dio\s+Di[aá]rio\s*\(kWh\)[:\s]*([\d,]+)/i,
+                  /(?:Consumo Di[aá]rio|M[eé]dia Di[aá]ria)[:\s]+([\d,]+)/i]),
+    leit_ant:num([/Leitura\s+Anterior[:\s]+\d{2}\/\d{2}\/\d{4}\s+(\d{4,8})/i]),
+    leit_atu:num([/Leitura\s+Atual[:\s]+\d{2}\/\d{2}\/\d{4}\s+(\d{4,8})/i]),
+    // geração / injetada
+    g:       num([/Consumo\s+Ativo\s+Gerado\s+FP[^k]*([\d\.]+,\d{2})\s*kWh/i,
+                  /Ener\.\s+Inje\.\s+F\.\s+Ponta[^k]*([\d\.]+,\d{2})\s*kWh/i,
+                  /(?:Gera[çc][aã]o|Energia\s+Gerada)[^\d]*(\d{2,6})\s*kWh/i]),
+    injetado:num([/Energia\s+(?:Ativa\s+)?Injetada[^k]*([\d\.]+,\d{2})\s*kWh/i]),
+  };
+
+  // ── DEMANDA kW ──
+  const kw={
+    // Equatorial MA: "Demanda Contratada Única (kW): 402,00"
+    p_contratada:  num([/Demanda\s+Contratada\s+(?:P\b|Ponta)[^\d]*([\d,]+)\s*kW/i,
+                        /Dem(?:anda)?\s+Contratada\s+(?:P\b|Ponta)[:\s]*([\d,]+)/i]),
+    fp_contratada: num([/Demanda\s+Contratada\s+(?:Fora\s+Ponta|FP)[^\d]*([\d,]+)\s*kW/i,
+                        /Demanda\s+Contratada\s+[Úu]nica\s*\(kW\)[:\s]*([\d,]+)/i,
+                        /Demanda\s+Contratada[^\d]*([\d,]+)\s*kW/i]),
+    // Equatorial MA: "Demanda Ativa FP Reg ... 198,80 kW"
+    fp_medida:     num([/Demanda\s+Ativa\s+FP\s+Reg[^k]*([\d\.]+,\d{2})\s*kW/i,
+                        /Dem(?:\.\s+)?M[aá]x\.?\s+F\.?\s*Ponta\s*\(kW\)[:\s]*([\d,]+)/i,
+                        /Demanda\s+(?:Medida|Registrada)\s+(?:FP|Fora)[^\d]*([\d,]+)\s*kW/i]),
+    p_medida:      num([/Demanda\s+Ativa\s+NP\s+Reg[^k]*([\d\.]+,\d{2})\s*kW/i,
+                        /Dem(?:\.\s+)?M[aá]x\.?\s+Ponta\s*\(kW\)[:\s]*([\d,]+)/i,
+                        /Demanda\s+(?:Medida|Registrada)\s+(?:P\b|Ponta)[^\d]*([\d,]+)\s*kW/i]),
+    fp_faturada:   num([/Demanda\s+Faturada\s+(?:FP|Fora)[^\d]*([\d,]+)\s*kW/i,
+                        /Demanda\s+Faturada[^\d]*([\d,]+)\s*kW/i]),
+    p_faturada:    num([/Demanda\s+Faturada\s+(?:P\b|Ponta)[^\d]*([\d,]+)\s*kW/i]),
+    p_ultra:       num([/(?:KW-P-U|Ultrapas\w*\s+Ponta)[^\d]*([\d,]+)\s*kW/i]),
+    fp_ultra:      num([/(?:KW-FP-U|Ultrapas\w*\s+(?:FP|Fora))[^\d]*([\d,]+)\s*kW/i,
+                        /Ultrapas[^\d]*([\d,]+)\s*kW/i]),
+  };
+
+  // ── UFER / DMCR / UFDR (energia reativa) ──
+  // Equatorial MA: "Consumo Reativo Exced NP Reg ... 513,10 kVAr"
+  //                "Consumo Reativo Exced FP Reg ... 1.750,35 kVAr"
+  //                "Demanda DMCR NP Reg ... 16,80 kVAr"
+  //                "Demanda DMCR FP Reg ... 15,05 kVAr"
+  const reativa={
+    ufer_p:  num([/Consumo\s+Reativo\s+Exced(?:ente)?\s+NP\s+Reg[^k]*([\d\.]+,\d{2})\s*kVAr/i,
+                  /Reat\.\s+Exced\.\s+Ponta[^k]*([\d\.]+,\d{2})\s*kVAr/i,
+                  /UFER[-\s]+P\b[^\d]*([\d,]+)/i]),
+    ufer_fp: num([/Consumo\s+Reativo\s+Exced(?:ente)?\s+FP\s+Reg[^k]*([\d\.]+,\d{2})\s*kVAr/i,
+                  /Reat\.\s+Exced\.\s+F\.\s+Ponta[^k]*([\d\.]+,\d{2})\s*kVAr/i,
+                  /UFER[-\s]+FP[^\d]*([\d,]+)/i]),
+    ufer_rv: num([/Consumo\s+Reativo\s+Exced(?:ente)?\s+RV\s+Reg[^k]*([\d\.]+,\d{2})\s*kVAr/i]),
+    dmcr_p:  num([/Demanda\s+DMCR\s+NP\s+Reg[^k]*([\d\.]+,\d{2})\s*kVAr/i,
+                  /Dem\.\s+Reat\.\s+Exced\.\s+Pta[^k]*([\d\.]+,\d{2})\s*kVAr/i,
+                  /DMCR[-\s]+(?:NP|P\b)[^\d]*([\d,]+)/i]),
+    dmcr_fp: num([/Demanda\s+DMCR\s+FP\s+Reg[^k]*([\d\.]+,\d{2})\s*kVAr/i,
+                  /Dem\.\s+Reat\.\s+Exced\.\s+FP[^k]*([\d\.]+,\d{2})\s*kVAr/i,
+                  /DMCR[-\s]+FP[^\d]*([\d,]+)/i]),
+    ufdr_p:  num([/UFDR[-\s]+P\b[^\d]*([\d,]+)/i]),
+    ufdr_fp: num([/UFDR[-\s]+FP[^\d]*([\d,]+)/i]),
+  };
+
+  // ── VALORES COBRADOS ──
+  // Equatorial MA tabela Itens de Fatura: "Label (kWh)  qty  precoUnit  tarifaUnit  pis/cofins  icms  valor"
+  // Extrai usando itemFatura() para linhas especiais; valores simples via regex
+  const _iDemAtiva   = itemFatura(/Demanda\s+Ativa\s*\(kW\)/i);
+  const _iReatExcNP  = itemFatura(/Consumo\s+Reativo\s+Excedente\s+NP\s*\(kVAr\)/i);
+  const _iReatExcFP  = itemFatura(/Consumo\s+Reativo\s+Excedente\s+FP\s*\(kVAr\)/i);
+  const _iReatExcRV  = itemFatura(/Consumo\s+Reativo\s+Excedente\s+RV\s*\(kVAr\)/i);
+  const _iDemGer     = itemFatura(/Demanda\s+de\s+Gera[çc][aã]o\s*\(kW\)/i);
+  const _iBandeira   = itemFatura(/Adicional\s+Bandeira/i);
+
+  const val={
+    consumo_tusd:    money([/\bCONSUMO TUSD\b[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_te:      money([/\bCONSUMO TE\b[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_tusd_p:  money([/CONS(?:UMO)?\s+TUSD\s+(?:PONTA|P\b)[^\d]*([\d\.]+,\d{2})/i,/TUSD\s+PONTA[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_te_p:    money([/CONS(?:UMO)?\s+TE\s+(?:PONTA|P\b)[^\d]*([\d\.]+,\d{2})/i,/TE\s+PONTA[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_tusd_fp: money([/CONS(?:UMO)?\s+TUSD\s+(?:FORA|FP)[^\d]*([\d\.]+,\d{2})/i,/TUSD\s+(?:FORA|FP)[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_te_fp:   money([/CONS(?:UMO)?\s+TE\s+(?:FORA|FP)[^\d]*([\d\.]+,\d{2})/i,/TE\s+(?:FORA|FP)[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_tusd_int:money([/TUSD\s+(?:INT|INTERMEDIARI)[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_te_int:  money([/TE\s+(?:INT|INTERMEDIARI)[^\d]*([\d\.]+,\d{2})/i]),
+    // Equatorial MA: "Demanda Ativa (kW)  198,80  38,552163  28,450000  ...  7.664,17"
+    dem_fp:  _iDemAtiva.valor || money([/Demanda\s+Ativa\s*\(kW\)[^\d]*([\d\.]+,\d{2})$/im,
+                                        /Demanda\s+(?:Fora\s+de?\s+Ponta|FP)[^\d]*([\d\.]+,\d{2})/i]),
+    dem_ponta: money([/Demanda\s+(?:na\s+)?Ponta[^\d]*([\d\.]+,\d{2})/i]),
+    ultra_fp:  money([/Ultrapas\w*\s+(?:FP|Fora)[^\d]*([\d\.]+,\d{2})/i,/Ultrapas[^\d]*([\d\.]+,\d{2})/i]),
+    ultra_p:   money([/Ultrapas\w*\s+(?:P\b|Ponta)[^\d]*([\d\.]+,\d{2})/i]),
+    // Reativos excedentes — Equatorial MA
+    ufer_p:  _iReatExcNP.valor || money([/Consumo\s+Reativo\s+Excedente\s+NP[^\d]*([\d\.]+,\d{2})$/im,
+                                         /UFER\s+PONTA[^\d]*([\d\.]+,\d{2})/i]),
+    ufer_fp: _iReatExcFP.valor || money([/Consumo\s+Reativo\s+Excedente\s+FP[^\d]*([\d\.]+,\d{2})$/im,
+                                         /UFER\s+(?:FP|Fora)[^\d]*([\d\.]+,\d{2})/i]),
+    ufer_rv: _iReatExcRV.valor || null,
+    ufdr_p:  money([/UFDR\s+PONTA[^\d]*([\d\.]+,\d{2})/i]),
+    ufdr_fp: money([/UFDR\s+(?:FP|Fora)[^\d]*([\d\.]+,\d{2})/i]),
+    // compensado
+    consumo_comp_p:  _iConsP.valor  || money([/Consumo\s+Compensado\s+(?:NP|Ponta)[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_comp_fp: _iConsFP.valor || money([/Consumo\s+Compensado\s+FP[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_reservado: _iConsRV.valor || money([/Consumo\s+Reservado\s*\(kWh\)[^\d]*([\d\.]+,\d{2})/i]),
+    dem_geracao: _iDemGer.valor || money([/Demanda\s+de\s+Gera[çc][aã]o[^\d]*([\d\.]+,\d{2})/i]),
+    adicional_am:    _iBandeira.valor || money([/Adicional\s+(?:de\s+)?(?:Bandeira\s+)?Amarel[^\d]*([\d\.]+,\d{2})/i]),
+    adicional_verm1: money([/Adicional\s+(?:Bandeira\s+)?Vermelh[^\d1]*1[^\d]*([\d\.]+,\d{2})/i,/Bandeira\s+Vermelha\s+1[^\d]*([\d\.]+,\d{2})/i]),
+    adicional_verm2: money([/Adicional\s+(?:Bandeira\s+)?Vermelh[^\d2]*2[^\d]*([\d\.]+,\d{2})/i,/Bandeira\s+Vermelha\s+2[^\d]*([\d\.]+,\d{2})/i]),
+    cred_sub_tax:    money([/CRED_SUB_TAX|Cr[eé]dito\s+de\s+Subtribut[^\d]*([\d\.]+,\d{2})/i]),
+    sub_tax:         money([/\bSUB_TAX\b|Subtribut[^\d]*([\d\.]+,\d{2})/i]),
+    cip:             money([/\bCIP\b[^\d]*([\d\.]+,\d{2})/i,/Ilumina[çc][aã]o P[úu]blica[^\d]*([\d\.]+,\d{2})/i]),
+    loc_equip:       money([/Loca[çc][aã]o\s+(?:de\s+)?Equipamento[^\d]*([\d\.]+,\d{2})/i]),
+    multa:           money([/MULTA CONTA ANTERIOR[^\d]*([\d\.]+,\d{2})/i,/(?:Multa|MULTA)[^\d]*([\d\.]+,\d{2})/i]),
+    juros:           money([/JUROS CONTA ANTERIOR[^\d]*([\d\.]+,\d{2})/i,/(?:Juros|JUROS)[^\d]*([\d\.]+,\d{2})/i]),
+    correcao:        money([/(?:CORRECAO MONETARIA|AtualizMon|Atualiza[çc][aã]o Monet[aá]ria|Corre[çc][aã]o Monet[aá]ria)[^\d]*([\d\.]+,\d{2})/i]),
+    multa_cap_emerg: money([/Multa\s+(?:Cap\.?\s*Emerg|Capac\.?\s*Emerg)[^\d]*([\d\.]+,\d{2})/i]),
+    cap_emergencial: money([/Capacidade\s+Emergencial[^\d]*([\d\.]+,\d{2})/i,/\bCapEmergencial\b[^\d]*([\d\.]+,\d{2})/i]),
+    ess:             money([/\bESS\b[^\d]*([\d\.]+,\d{2})/i]),
+    ers:             money([/\bERS\b[^\d]*([\d\.]+,\d{2})/i]),
+    proinfa:         money([/PROINFA[^\d]*([\d\.]+,\d{2})/i]),
+    cde:             money([/\bCDE\b[^\d]*([\d\.]+,\d{2})/i]),
+    energia_inject:  money([/Energia\s+(?:Ativa\s+)?Injetada[^(][^\d]*([\d\.]+,\d{2})/i]),
+    cred_usados:     money([/Cr[eé]ditos?\s+(?:Usados?|Compensados?|Aplicados?)[^\d]*([\d\.]+,\d{2})/i]),
+    beneficio_liq:   money([/Benef[íi]cio\s+Tarif[aá]rio\s+L[íi]quido[^\d]*([\d\.]+,\d{2})/i]),
+    ajuste_avaria:   money([/Ajuste\s+Avaria[^\d]*([\d\.]+,\d{2})/i]),
+  };
+
+  // ── COMPENSAÇÕES DIC/FIC/DMIC ──
+  const comp={
+    cu_dic_mensal:  money([/CU[-\s]+DIC[-\s]+(?:Mes(?:al)?|M)[^\d]*([\d\.]+,\d{2})/i,/Compens[^\d]*DIC\s*(?:Mes|M)[^\d]*([\d\.]+,\d{2})/i]),
+    cu_dic_trim:    money([/CU[-\s]+DIC[-\s]+Trim[^\d]*([\d\.]+,\d{2})/i]),
+    cu_dic_anual:   money([/CU[-\s]+DIC[-\s]+Anual[^\d]*([\d\.]+,\d{2})/i]),
+    cu_fic_mensal:  money([/CU[-\s]+FIC[-\s]+(?:Mes(?:al)?|M)[^\d]*([\d\.]+,\d{2})/i]),
+    cu_fic_trim:    money([/CU[-\s]+FIC[-\s]+Trim[^\d]*([\d\.]+,\d{2})/i]),
+    cu_dmic:        money([/CU[-\s]+DMIC[^\d]*([\d\.]+,\d{2})/i]),
+    cu_dicri:       money([/CU[-\s]+DICRI[^\d]*([\d\.]+,\d{2})/i]),
+    cred_prox_fat:  money([/(?:Cr[eé]dito\s+Pr[óo]x(?:ima)?\s+Fatura|CredProxFat)[^\d]*([\d\.]+,\d{2})/i]),
+    saldo_anterior: money([/(?:Saldo\s+Anterior|SaldoAnterior)[^\d]*([\d\.]+,\d{2})/i]),
+  };
+
+  // ── TARIFAS UNITÁRIAS ──
+  // Equatorial MA: "Tarifa sem tributos\nConsumo Fora Ponta: 0,236040\nDemanda Ativa: 28,450000"
+  // Itens de Fatura col2=preço com tributos, col3=tarifa sem tributos
+  const tarifas={
+    tusd:    num([/CONSUMO TUSD\s+kWh\s+\d+\s+([\d,]{5,10})/i]),
+    te:      num([/CONSUMO TE\s+kWh\s+\d+\s+([\d,]{5,10})/i]),
+    tusd_p:  num([/TUSD\s+PONTA\s+kWh\s+\d+\s+([\d,]{5,10})/i,/CONSUMO\s+TUSD\s+PONTA\s+kWh\s+\d+\s+([\d,]{5,10})/i]),
+    te_p:    num([/TE\s+PONTA\s+kWh\s+\d+\s+([\d,]{5,10})/i,/CONSUMO\s+TE\s+PONTA\s+kWh\s+\d+\s+([\d,]{5,10})/i]),
+    tusd_fp: num([/TUSD\s+(?:FP|FORA)\s+kWh\s+\d+\s+([\d,]{5,10})/i,/CONSUMO\s+TUSD\s+(?:FP|FORA)\s+kWh\s+\d+\s+([\d,]{5,10})/i]),
+    te_fp:   num([/TE\s+(?:FP|FORA)\s+kWh\s+\d+\s+([\d,]{5,10})/i,/CONSUMO\s+TE\s+(?:FP|FORA)\s+kWh\s+\d+\s+([\d,]{5,10})/i]),
+    // Equatorial MA: "Demanda Ativa: 28,450000" e "Consumo Fora Ponta: 0,236040"
+    dem_fp:  _iDemAtiva.preco || num([/Demanda\s+Ativa[:\s]+([\d,]{4,10})(?!\d)/i,
+                                      /Demanda\s+(?:FP|Fora)[^\d]*([\d,]{3,9})\s*R\$\/kW/i]),
+    dem_p:   num([/Demanda\s+Ponta[^\d]*([\d,]{3,9})\s*R\$\/kW/i]),
+    cons_fp: num([/Consumo\s+Fora\s+Ponta[:\s]+([\d,]{5,10})(?!\d)/i]),
+    cons_p:  _iConsP.preco  || num([/Consumo\s+(?:NP|Ponta)[:\s]+([\d,]{5,10})(?!\d)/i]),
+    // reativos: usar preco do itemFatura ou fallback
+    ufer_p:  _iReatExcNP.preco || num([/Consumo\s+Reativo\s+Excedente\s+NP\s*\(kVAr\)\s+[\d,\.]+\s+([\d,]{4,10})/i]),
+    ufer_fp: _iReatExcFP.preco || num([/Consumo\s+Reativo\s+Excedente\s+FP\s*\(kVAr\)\s+[\d,\.]+\s+([\d,]{4,10})/i]),
+    reativo_rv: _iReatExcRV.preco || null,
+    ufdr_p:  num([/UFDR\s+(?:PONTA|P\b)\s+ufdr\s+[\d,]+\s+([\d,]{3,10})/i]),
+    ufdr_fp: num([/UFDR\s+(?:FP|FORA)\s+ufdr\s+[\d,]+\s+([\d,]{3,10})/i]),
+  };
+
+  // ── IMPOSTOS (ICMS-BC, ICMS-AE, ICMS-AD, ICMS-V, PIS, COFINS) ──
+  // Estratégia: múltiplos formatos de distribuidoras brasileiras
+  // Formato 1: "ICMS Base: 1.234,56  Alíquota: 30,00%  Valor: 370,37"
+  // Formato 2: "ICMS 30,00 1.234,56 370,37"  (tabela colapsada pelo pdf.js)
+  // Formato 3: "Valor do ICMS R$ 370,37"
+  // Formato 4: "ICMS-BC 1234,56 ICMS-AE 30% ICMS-V 370,37"
+  // Formato 5 (Equatorial/Enel): linha "ICMS  1.234,56  30,000  370,37"
+  // Formato 6 (CPFL/Cemig): "Base de Cálculo ICMS: 1.234,56  Alíq: 30%  ICMS: 370,37"
+
+  // Extrator especializado de linha de imposto: pega base, alíquota e valor da mesma linha
+  function extrairLinhaImposto(labelRe) {
+    // Tenta capturar padrão: LABEL  [base]  [aliq%]  [valor]
+    const m = s.match(labelRe);
+    if (!m) return { base: null, ali: null, valor: null };
+    const pos = m.index + m[0].length;
+    const trecho = s.slice(pos, pos + 200);
+    // Padrão: número  número%  número  (base aliq valor)
+    let r = trecho.match(/\s*([\d\.]+,\d{2,})\s+([\d,]+)[%\s]\s*([\d\.]+,\d{2})/);
+    if (r) return {
+      base:  parseFloat(r[1].replace(/\./g,'').replace(',','.')),
+      ali:   parseFloat(r[2].replace(',','.')),
+      valor: parseFloat(r[3].replace(/\./g,'').replace(',','.'))
+    };
+    // Padrão: aliq%  base  valor
+    r = trecho.match(/\s*([\d,]+)[%]\s*([\d\.]+,\d{2})\s+([\d\.]+,\d{2})/);
+    if (r) return {
+      ali:   parseFloat(r[1].replace(',','.')),
+      base:  parseFloat(r[2].replace(/\./g,'').replace(',','.')),
+      valor: parseFloat(r[3].replace(/\./g,'').replace(',','.'))
+    };
+    // Padrão simples: só valor monetário próximo
+    r = trecho.match(/\s*([\d\.]+,\d{2})/);
+    if (r) return { base: null, ali: null, valor: parseFloat(r[1].replace(/\./g,'').replace(',','.')) };
+    return { base: null, ali: null, valor: null };
+  }
+
+  const _icms  = extrairLinhaImposto(/\bICMS\b/i);
+  const _pis   = extrairLinhaImposto(/\bPIS\b(?!\s*[\/+]COFINS)/i);
+  const _cof   = extrairLinhaImposto(/\bCOFINS\b/i);
+  const _pisCof= extrairLinhaImposto(/PIS\s*[\/+]\s*COFINS/i);
+
+  const imp={
+    // Base de cálculo ICMS
+    icms_bc: money([
+      /ICMS[-\s]*BC[^\d]*([\d\.]+,\d{2})/i,
+      /Base\s+(?:de\s+)?[Cc][áa]lculo\s+ICMS[^\d]*([\d\.]+,\d{2})/i,
+      /Base\s+ICMS[^\d]*([\d\.]+,\d{2})/i,
+      /ICMS\s+([\d\.]+,\d{2})\s+[\d,]+[%\s]/i,
+    ]) || _icms.base,
+
+    // Alíquota ICMS
+    icms_ae: num([
+      /ICMS[-\s]*AE[^\d]*([\d,]+)\s*%/i,
+      /Al[íi]quota\s+ICMS[^\d]*([\d,]+)\s*%/i,
+      /Al[íi]q\.?\s*ICMS[^\d]*([\d,]+)\s*%/i,
+      /ICMS[^\d]*([\d,]+)\s*%/i,
+    ]) || _icms.ali,
+
+    icms_ad: num([/ICMS[-\s]*AD[^\d]*([\d,]+)/i]),
+
+    // Valor ICMS cobrado
+    icms_v: money([
+      /ICMS[-\s]*V\b[^\d]*([\d\.]+,\d{2})/i,
+      /Valor\s+(?:do\s+)?ICMS[^\d]*([\d\.]+,\d{2})/i,
+      /ICMS[^\d\w][\s\S]{0,60}?Valor[^\d]*([\d\.]+,\d{2})/i,
+      // tabela: ICMS <base> <aliq> <valor> — pega o último número da linha
+      /ICMS\s+[\d\.]+,\d{2}\s+[\d,]+\s*%?\s*([\d\.]+,\d{2})/i,
+      /ICMS\s+[\d,]+\s*%\s+[\d\.]+,\d{2}\s+([\d\.]+,\d{2})/i,
+      /\bICMS\b[^\n\d]*([\d\.]+,\d{2})\s*$/im,
+    ]) || _icms.valor,
+
+    // PIS+COFINS combinado (algumas distribuidoras mostram junto)
+    pis_cofins_a: num([
+      /PIS[-\s]*COFINS[-\s]*A[^\d]*([\d,]+)\s*%/i,
+      /PIS\s*[\/+]\s*COFINS[^\d]*([\d,]+)\s*%/i,
+      /Al[íi]quota\s+PIS\s*[\/+]\s*COFINS[^\d]*([\d,]+)\s*%/i,
+    ]),
+
+    pis_cofins_v: money([
+      /PIS[-\s]*COFINS[-\s]*V\b[^\d]*([\d\.]+,\d{2})/i,
+      /PIS\s*[+\/]\s*COFINS[^\d]*([\d\.]+,\d{2})/i,
+      /Valor\s+PIS\s*[+\/]\s*COFINS[^\d]*([\d\.]+,\d{2})/i,
+    ]) || _pisCof.valor,
+
+    // PIS separado
+    pis_ali: num([
+      /PIS[-\s]*(?:Ali|Alíquota)[^\d]*([\d,]+)\s*%/i,
+      /(?<![A-Z])PIS\b(?!\s*[\/+])[^\d]*([\d,]+)\s*%/i,
+    ]) || _pis.ali,
+
+    pis_base: money([
+      /Base\s+(?:de\s+)?[Cc][áa]lculo\s+PIS[^\d]*([\d\.]+,\d{2})/i,
+      /PIS\s+([\d\.]+,\d{2})\s+[\d,]+\s*%/i,
+    ]) || _pis.base,
+
+    pis_v: money([
+      /PIS[-\s]*V\b[^\d]*([\d\.]+,\d{2})/i,
+      /Valor\s+(?:do\s+)?PIS[^\d]*([\d\.]+,\d{2})/i,
+      /\bPIS\b(?!\s*[\/+])[^\n\d]*([\d\.]+,\d{2})\s*$/im,
+      /PIS\s+[\d\.]+,\d{2}\s+[\d,]+\s*%?\s*([\d\.]+,\d{2})/i,
+    ]) || _pis.valor,
+
+    // COFINS separado
+    cofins_ali: num([
+      /COFINS[-\s]*(?:Ali|Alíquota)[^\d]*([\d,]+)\s*%/i,
+      /COFINS[^\d]*([\d,]+)\s*%/i,
+    ]) || _cof.ali,
+
+    cofins_base: money([
+      /Base\s+(?:de\s+)?[Cc][áa]lculo\s+COFINS[^\d]*([\d\.]+,\d{2})/i,
+      /COFINS\s+([\d\.]+,\d{2})\s+[\d,]+\s*%/i,
+    ]) || _cof.base,
+
+    cofins_v: money([
+      /COFINS[-\s]*V\b[^\d]*([\d\.]+,\d{2})/i,
+      /Valor\s+(?:do\s+)?COFINS[^\d]*([\d\.]+,\d{2})/i,
+      /\bCOFINS\b[^\n\d]*([\d\.]+,\d{2})\s*$/im,
+      /COFINS\s+[\d\.]+,\d{2}\s+[\d,]+\s*%?\s*([\d\.]+,\d{2})/i,
+    ]) || _cof.valor,
+  };
+
+  // Fallback: se não achou PIS/COFINS separado mas achou combinado, distribui
+  if (!imp.pis_v && !imp.cofins_v && imp.pis_cofins_v) {
+    imp.pis_v   = null;
+    imp.cofins_v= null;
+  }
+
+  // ── INDICADORES DIC/FIC/DMIC/DICRI/EUSD ──
+  const ind={
+    data_apuracao: get([/(?:Data\s+de\s+)?Apura[çc][aã]o[:\s]+(\d{2}\/\d{2}\/\d{4})/i]),
+    dic_mes:       num([/I\.?\s*DIC[-\s]*M[eê]s[^\d]*([\d,]+)/i,/DIC\s+M[eê]s(?:al)?[^\d]*([\d,]+)\s*h/i]),
+    dic_trim:      num([/I\.?\s*DIC[-\s]*Trim[^\d]*([\d,]+)/i,/DIC\s+Trim[^\d]*([\d,]+)\s*h/i]),
+    dic_anual:     num([/I\.?\s*DIC[-\s]*Anual[^\d]*([\d,]+)/i,/DIC\s+Anual[^\d]*([\d,]+)\s*h/i]),
+    dic_real:      num([/I\.?\s*DIC[-\s]*Realizado[^\d]*([\d,]+)/i,/DIC\s+Realizado[^\d]*([\d,]+)\s*h/i]),
+    fic_mes:       num([/I\.?\s*FIC[-\s]*M[eê]s[^\d]*([\d,]+)/i,/FIC\s+M[eê]s(?:al)?[^\d]*([\d,]+)/i]),
+    fic_trim:      num([/I\.?\s*FIC[-\s]*Trim[^\d]*([\d,]+)/i,/FIC\s+Trim[^\d]*([\d,]+)/i]),
+    fic_anual:     num([/I\.?\s*FIC[-\s]*Anual[^\d]*([\d,]+)/i,/FIC\s+Anual[^\d]*([\d,]+)/i]),
+    fic_real:      num([/I\.?\s*FIC[-\s]*Realizado[^\d]*([\d,]+)/i,/FIC\s+Realizado[^\d]*([\d,]+)/i]),
+    dmic_mes:      num([/I\.?\s*DMIC[-\s]*M[eê]s[^\d]*([\d,]+)/i,/DMIC\s+M[eê]s(?:al)?[^\d]*([\d,]+)\s*h/i]),
+    dmic_real:     num([/I\.?\s*DMIC[-\s]*Realizado[^\d]*([\d,]+)/i,/DMIC\s+Realizado[^\d]*([\d,]+)\s*h/i]),
+    dicri_mes:     num([/I\.?\s*DICRI[-\s]*M[eê]s[^\d]*([\d,]+)/i]),
+    dicri_real:    num([/I\.?\s*DICRI[-\s]*Realizado[^\d]*([\d,]+)/i]),
+    eusd_real:     money([/I\.?\s*EUSD[-\s]*Realizado[^\d]*([\d\.]+,\d{2})/i,/EUSD[^\d]*([\d\.]+,\d{2})/i]),
+  };
+
+  // ── GERAÇÃO DISTRIBUÍDA SALDOS ──
+  const gd={
+    injetada_total:   num([/Gera[çc][aã]o\s+Injetada\s+Total[^\d]*(\d{2,6})/i]),
+    saldo_mes:        num([/Saldo\s+Do\s+M[eê]s[^\d]*(\d{2,6})/i,/SaldoDoMes[^\d]*(\d{2,6})/i]),
+    saldo_acumulado:  num([/Saldo\s+Acumulado[^\d]*(\d{2,6})/i,/SaldoAcumulado[^\d]*(\d{2,6})/i]),
+    saldo_expirar:    num([/Saldo\s+(?:a\s+)?Expirar[^\d]*(\d{2,6})/i,/SaldoExpirar[^\d]*(\d{2,6})/i]),
+    geracao_periodo:  num([/Gera[çc][aã]o\s+Total\s+Per[íi]odo[^\d]*(\d{2,6})/i,/GeracaoTotalPeriodo[^\d]*(\d{2,6})/i]),
+    cred_prox:        num([/Cr[eé]ditos?\s+Pr[óo]x(?:ima)?\s+Fatura[^\d]*(\d{2,6})/i]),
+    saldo_ant:        num([/Saldo\s+Anterior[^\d]*(\d{2,6})/i]),
+  };
+
+  // ── BENEFÍCIOS ──
+  const benef={
+    irrigante:   has([/irrigante|irrigac[aã]o\s+rural|tarifa.*irrig|benef.*irrig/i]),
+    baixa_renda: has([/tarifa\s+social|baixa\s+renda|TSEE|CadÚnico|CadUnico|subclasse.*baixa/i]),
+    cooperativa: has([/cooperativa|COOP\b/i]),
+    val_benef:   money([/(?:Benef[íi]cio|Desconto\s+(?:social|irrigante|rural|tarif))[^\d]*([\d\.]+,\d{2})/i]),
+  };
+
+  // ── HISTÓRICO ──
+  const historico=[];
+  let m;
+  const rH=/(\d{4})\s+(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s+(\d{2})\s+([\d,]+)\s+([\d,]+)/gi;
+  const rH2=/(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\/(\d{4})\s+(\d{2})\s+([\d]+(?:,\d+)?)\s+([\d,]+)/gi;
+  const rH3=/(\d{4})\s+(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s+(\d{2})\s+([\d,]+)/gi;
+  while((m=rH.exec(s))!==null) historico.push({mes:m[2].substring(0,3)+'/'+m[1],kwh:parseFloat(m[4].replace(',','.')),dias:parseInt(m[3]),media:parseFloat(m[5].replace(',','.'))});
+  if(!historico.length) while((m=rH2.exec(s))!==null) historico.push({mes:m[1]+'/'+m[2],kwh:parseFloat(m[4].replace(',','.')),dias:parseInt(m[3])});
+  if(!historico.length) while((m=rH3.exec(s))!==null) historico.push({mes:m[2].substring(0,3)+'/'+m[1],kwh:parseFloat(m[4].replace(',','.'))});
+
+  // ── DÉBITOS ──
+  const debitos=[];
+  const rD=/(\d{2}\/\d{4})\s+R?\$?\s*([\d\.]+,\d{2})\s+(\d{2}\/\d{2}\/\d{4})/g;
+  while((m=rD.exec(s))!==null){const v=parseFloat(m[2].replace(/\./g,'').replace(',','.'));if(v>0&&v<50000)debitos.push({ref:m[1],valor:v,venc:m[3]})}
+
+  // detectar grupo A por sinais múltiplos
+  // Equatorial MA: "Tipo de Tarifa: A3A_VD" → grupo A
+  const grupoA=!!(
+    (ident.grupo&&ident.grupo.toUpperCase().includes('A'))||
+    (ident.subgrupo&&ident.subgrupo.toUpperCase().startsWith('A'))||
+    (ident.tarifa&&/A[123]/i.test(ident.tarifa))||
+    kw.fp_contratada||kw.p_contratada||kw.fp_faturada||kw.p_faturada||
+    val.dem_fp||val.dem_ponta||kwh.p!==null||kwh.fp!==null||
+    reativa.dmcr_fp!==null||reativa.dmcr_p!==null
+  );
+
+  return{ident,periodo,totais,kwh,kw,reativa,val,comp,tarifas,imp,ind,gd,benef,historico,debitos,grupoA};
+}
+
+
+// ══════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════
+function renderCampos(d){
+  const cont=document.getElementById('cards');
+  const alerts=document.getElementById('alertas');
+  cont.innerHTML='';alerts.innerHTML='';
+
+  // helpers
+  function R(v,dec=2){return v!==null&&v!==undefined?Number(v).toFixed(dec).replace('.',','):null}
+  function M(v){return v!==null&&v!==undefined?'R$ '+R(v):null}
+  function Pct(v){return v!==null&&v!==undefined?R(v)+'%':null}
+  function kWh(v){return v!==null&&v!==undefined?R(v,0)+' kWh':null}
+  function kW(v){return v!==null&&v!==undefined?R(v,0)+' kW':null}
+
+  // fAlways: igual a f(), mas sempre exibe o campo (mostra "—" se valor null/vazio)
+  function fAlways(label,valor,tipo,tk){
+    const hasVal=valor!==null&&valor!==undefined&&valor!=='';
+    const tip=tk&&T[tk]?T[tk]:'';
+    const cls=({money:' money',alert:' alert',ok:' ok',warn:' warn',blue:' blue'})[tipo]||'';
+    const isSub=label.startsWith('↳');
+    const disp=hasVal?String(valor):'<span style="color:#aac0d8;font-style:italic">— não identificado</span>';
+    const ii=tip?'<span class="ii">?</span>':'';
+    const tipDiv=tip?`<div class="ftip">${tip.replace(/\n/g,'<br>')}</div>`:'';
+    return`<div class="field${isSub?' sub-row':''}"><div class="fm"><span class="fk">${label}${ii}</span><span class="fv${hasVal?cls:' muted'}">${disp}</span></div>${tipDiv}</div>`;
+  }
+
+  function f(label,valor,tipo,tk){
+    if(valor===null||valor===undefined||valor==='')return'';
+    const tip=tk&&T[tk]?T[tk]:'';
+    const cls=({money:' money',alert:' alert',ok:' ok',warn:' warn',blue:' blue'})[tipo]||'';
+    const isSub=label.startsWith('↳');
+    let disp=String(valor);
+    // bandeira colorida
+    if(tk==='bandeira'){
+      const v=disp.toLowerCase();
+      if(v.includes('escassez'))         disp='<span class="bdg bdg-p">🟣 Escassez Hídrica</span>';
+      else if(v.match(/vermelha.*[2ii]/)) disp='<span class="bdg bdg-r">🔴 Vermelha 2</span>';
+      else if(v.includes('vermelha'))     disp='<span class="bdg bdg-r">🔴 Vermelha 1</span>';
+      else if(v.includes('amarela'))      disp='<span class="bdg bdg-y">🟡 Amarela</span>';
+      else                                disp='<span class="bdg bdg-g">🟢 Verde</span>';
+    }
+    const ii=tip?'<span class="ii">?</span>':'';
+    const tipDiv=tip?`<div class="ftip">${tip.replace(/\n/g,'<br>')}</div>`:'';
+    return`<div class="field${isSub?' sub-row':''}"><div class="fm"><span class="fk">${label}${ii}</span><span class="fv${cls}">${disp}</span></div>${tipDiv}</div>`;
+  }
+
+  function sep(label,cls){return`<div class="fsep${cls?' '+cls:''}">${label}</div>`}
+
+  // Sub-linha de detalhe: preço unitário | quantidade | total
+  function fDetalhe(labelPreco,preco,unidade,qty,total,tipoTotal){
+    let html='';
+    if(preco!==null&&preco!==undefined)
+      html+=f('↳ Preço unitário',R(preco,6)+' R$/'+unidade,'warn');
+    if(qty!==null&&qty!==undefined)
+      html+=f('↳ Quantidade',R(qty,0)+' '+unidade,'blue');
+    if(total!==null&&total!==undefined)
+      html+=f('↳ Total cobrado',M(total),tipoTotal||'money');
+    return html;
+  }
+
+  function card(icon,title,sub,rows,cls){
+    if(!rows.trim())return null;
+    const el=document.createElement('div');
+    el.className='card'+(cls?' '+cls:'');
+    el.innerHTML=`<div class="card-head"><span class="ch-icon">${icon}</span><span class="ch-title">${title}</span>${sub?'<span class="ch-sub">'+sub+'</span>':''}</div><div class="card-body">${rows}</div>`;
+    return el;
+  }
+
+  function alerta(tipo,title,msg){
+    const el=document.createElement('div');
+    el.className='ab '+tipo;
+    el.innerHTML=`<strong>${title}</strong>${msg}`;
+    alerts.appendChild(el);
+  }
+
+  // ── ALERTAS ──
+  d.debitos.forEach(x=>alerta('red','⚠ Débito em aberto — risco de corte!',`Ref. ${x.ref} · R$ ${x.valor.toFixed(2).replace('.',',')} · Venceu em ${x.venc}`));
+  if(d.benef.irrigante)    alerta('green','✅ Benefício Rural/Irrigante detectado','Desconto tarifário de irrigação rural identificado. Verifique se os percentuais estão corretos na fatura.');
+  if(d.benef.baixa_renda)  alerta('green','✅ Tarifa Social / Baixa Renda detectada','Benefício de Tarifa Social de Energia Elétrica identificado nesta fatura.');
+  if(d.benef.cooperativa)  alerta('green','✅ Cooperativa de Eletrificação Rural detectada','Tarifa diferenciada para cooperativa.');
+  if(d.grupoA)             alerta('blue','ℹ Cliente Grupo A — Média/Alta Tensão','Fatura com demanda contratada e consumo diferenciado por horário (Ponta e Fora de Ponta).');
+  if(d.val.ultra_fp||d.val.ultra_p) alerta('red','⚠ Ultrapassagem de demanda!','Demanda medida superou a contratada. Tarifa = 2× a normal. Revise a demanda contratada ou escalone equipamentos.');
+  if(d.val.ufer_p||d.val.ufer_fp||d.reativa.ufer_p||d.reativa.ufer_fp) alerta('warn','⚠ UFER cobrada — fator de potência abaixo de 0,92','Energia reativa excessiva detectada. Instale banco de capacitores para corrigir o fator de potência e eliminar esta cobrança.');
+  if(d.val.multa||d.val.juros)      alerta('red','⚠ Encargos por atraso aplicados','Esta fatura contém multa ou juros por pagamento atrasado de fatura anterior.');
+  const compTotal=(d.comp.cu_dic_mensal||0)+(d.comp.cu_dic_trim||0)+(d.comp.cu_fic_mensal||0)+(d.comp.cu_dmic||0)+(d.comp.cu_dicri||0);
+  if(compTotal>0) alerta('green','✅ Compensação por interrupção aplicada','A distribuidora aplicou crédito por ultrapassagem dos indicadores de qualidade (DIC/FIC/DMIC).');
+
+  // ── CARD: IDENTIFICAÇÃO ──
+  const rId=
+    f('Nome',d.ident.nome)+
+    f('CPF / CNPJ',d.ident.cpf)+
+    f('Endereço',d.ident.endereco)+
+    f('CEP',d.ident.cep)+
+    f('Cidade / UF',d.ident.cidade)+
+    f('Unidade Consumidora (UC)',d.ident.uc,'','uc')+
+    f('Grupo',d.ident.grupo,d.grupoA?'blue':'','grupo')+
+    f('Subgrupo',d.ident.subgrupo,'blue','subgrupo')+
+    f('Classe',d.ident.classe,'','classe')+
+    f('Tipo de ligação',d.ident.tipo_ligacao,'','tipo_ligacao')+
+    f('Tensão nominal',d.ident.tensao,'','tensao')+
+    f('Modalidade tarifária',d.ident.tarifa,'','tarifa')+
+    f('Cód. parceiro',d.ident.parceiro);
+
+  // ── CARD: PERÍODO / FATURA ──
+  const rFat=
+    f('P.Cons.Ini (início período)',d.periodo.p_cons_ini,'','p_cons_ini')+
+    f('P.Cons.Fin (fim período)',d.periodo.p_cons_fin,'','p_cons_fin')+
+    f('Data L.P. (emissão)',d.periodo.data_lp,'','data_lp')+
+    f('Data Vencimento',d.periodo.data_v,'','data_v')+
+    f('Referência',d.periodo.referencia)+
+    f('Nº de dias',d.periodo.numero_dias?d.periodo.numero_dias+' dias':null,'','numero_dias')+
+    f('Nota Fiscal nº',d.periodo.nota_fiscal)+
+    f('Bandeira tarifária',d.periodo.bandeira,'','bandeira')+
+    f('Próxima leitura',d.periodo.proxima_leitura)+
+    f('Protocolo NF-e',d.periodo.protocolo)+
+    f('Outros Créditos',M(d.totais.outros_creditos),'ok','outros_creditos')+
+    f('Outros Custos',M(d.totais.outros_custos),'alert','outros_custos');
+
+  // ── CARD: CONSUMO (kWh) ──
+  let rKwh='';
+  if(d.grupoA){
+    // Equatorial MA: tarifa ponta = campo cons_p, tarifa fp = campo cons_fp
+    const tarPonta = d.tarifas.cons_p || (d.tarifas.tusd_p||0)+(d.tarifas.te_p||0) || null;
+    const tarFP    = d.tarifas.cons_fp || (d.tarifas.tusd_fp||0)+(d.tarifas.te_fp||0) || null;
+    const totalConsP  = d.val.consumo_comp_p  || (d.val.consumo_tusd_p||0)+(d.val.consumo_te_p||0) || null;
+    const totalConsFP = d.val.consumo_comp_fp || (d.val.consumo_tusd_fp||0)+(d.val.consumo_te_fp||0) || null;
+
+    rKwh+=sep('⚡ Consumo Ponta (17h–22h dias úteis)','blue');
+    rKwh+=fAlways('kWh Ponta',kWh(d.kwh.p),'blue','kwh_p');
+    if(d.tarifas.tusd_p!==null)  rKwh+=f('↳ TUSD Ponta (R$/kWh)',R(d.tarifas.tusd_p,6)+' R$/kWh','warn','consumo_tusd_p');
+    if(d.tarifas.te_p!==null)    rKwh+=f('↳ TE Ponta (R$/kWh)',R(d.tarifas.te_p,6)+' R$/kWh','warn','consumo_te_p');
+    if(tarPonta&&!d.tarifas.tusd_p) rKwh+=f('↳ Tarifa Ponta (R$/kWh)',R(tarPonta,6)+' R$/kWh','warn');
+    else if(tarPonta&&d.tarifas.tusd_p) rKwh+=f('↳ Tarifa total Ponta',R(tarPonta,6)+' R$/kWh','warn');
+    rKwh+=fAlways('↳ Total Consumo Ponta',M(totalConsP),'money');
+
+    rKwh+=sep('⚡ Consumo Fora de Ponta');
+    rKwh+=fAlways('kWh Fora de Ponta',kWh(d.kwh.fp),'','kwh_fp');
+    if(d.tarifas.tusd_fp!==null) rKwh+=f('↳ TUSD FP (R$/kWh)',R(d.tarifas.tusd_fp,6)+' R$/kWh','warn','consumo_tusd_fp');
+    if(d.tarifas.te_fp!==null)   rKwh+=f('↳ TE FP (R$/kWh)',R(d.tarifas.te_fp,6)+' R$/kWh','warn','consumo_te_fp');
+    if(tarFP&&!d.tarifas.tusd_fp)   rKwh+=f('↳ Tarifa FP (R$/kWh)',R(tarFP,6)+' R$/kWh','warn');
+    else if(tarFP&&d.tarifas.tusd_fp) rKwh+=f('↳ Tarifa total FP',R(tarFP,6)+' R$/kWh','warn');
+    rKwh+=fAlways('↳ Total Consumo FP',M(totalConsFP),'money');
+
+    // Equatorial MA: Consumo Reservado (horário reservado/rural)
+    if(d.kwh.reservado||d.val.consumo_reservado){
+      rKwh+=sep('⚡ Consumo Reservado (Irrigação)');
+      rKwh+=f('kWh Reservado',kWh(d.kwh.reservado),'','kwh_total');
+      if(d.val.consumo_reservado) rKwh+=f('↳ Total Consumo Reservado',M(d.val.consumo_reservado),'money');
+    }
+
+    if(d.kwh.b&&!d.grupoA)rKwh+=sep('⚡ Total'),rKwh+=f('KWH-B — kWh total',kWh(d.kwh.b),'','kwh_b');
+    if(d.kwh.p_am||d.kwh.fp_am||d.kwh.b_am){
+      rKwh+=sep('🟡 Consumo em Bandeira Amarela');
+      rKwh+=f('KWH-P-am (Ponta)',kWh(d.kwh.p_am));
+      rKwh+=f('KWH-FP-am (FP)',kWh(d.kwh.fp_am));
+      rKwh+=f('KWH-B-am (total)',kWh(d.kwh.b_am));
+    }
+    if(d.kwh.p_verm||d.kwh.fp_verm||d.kwh.b_verm){
+      rKwh+=sep('🔴 Consumo em Bandeira Vermelha');
+      rKwh+=f('KWH-P-verm (Ponta)',kWh(d.kwh.p_verm));
+      rKwh+=f('KWH-FP-verm (FP)',kWh(d.kwh.fp_verm));
+      rKwh+=f('KWH-B-verm (total)',kWh(d.kwh.b_verm));
+    }
+  }else{
+    rKwh+=fAlways('KWH-B — kWh consumidos',kWh(d.kwh.b),'','kwh_total');
+    if(d.tarifas.tusd!==null) rKwh+=f('↳ TUSD (R$/kWh)',R(d.tarifas.tusd,6)+' R$/kWh','warn','consumo_tusd');
+    if(d.tarifas.te!==null)   rKwh+=f('↳ TE (R$/kWh)',R(d.tarifas.te,6)+' R$/kWh','warn','consumo_te');
+    const totalConsB=(d.val.consumo_tusd||0)+(d.val.consumo_te||0)||null;
+    if(totalConsB) rKwh+=f('↳ Total Consumo',M(totalConsB),'money');
+    if(d.kwh.p_am||d.kwh.fp_am){
+      rKwh+=sep('🟡 Bandeira Amarela');
+      rKwh+=f('kWh Amarela',kWh(d.kwh.b_am));
+    }
+    if(d.kwh.p_verm||d.kwh.fp_verm){
+      rKwh+=sep('🔴 Bandeira Vermelha');
+      rKwh+=f('kWh Vermelha',kWh(d.kwh.b_verm));
+    }
+  }
+  rKwh+=sep('Médias e leituras');
+  rKwh+=f('Média diária',d.kwh.media?d.kwh.media+' kWh/dia':null,'','media_diaria');
+  rKwh+=f('Leitura anterior (medidor)',d.kwh.leit_ant);
+  rKwh+=f('Leitura atual (medidor)',d.kwh.leit_atu);
+  if(d.kwh.g||d.kwh.injetado||d.gd.injetada_total||d.gd.saldo_mes||d.gd.saldo_acumulado){
+    rKwh+=sep('☀ Geração Distribuída','ok');
+    rKwh+=f('KWH-G — Energia gerada',kWh(d.kwh.g),'ok','geracao');
+    rKwh+=f('Energia injetada total',d.gd.injetada_total?d.gd.injetada_total+' kWh':null,'ok','energia_injetada');
+    rKwh+=f('Geração total no período',d.gd.geracao_periodo?d.gd.geracao_periodo+' kWh':null,'ok');
+    rKwh+=f('Saldo do mês (GD)',d.gd.saldo_mes?d.gd.saldo_mes+' kWh':null,'ok','saldo_mes');
+    rKwh+=f('Saldo acumulado (GD)',d.gd.saldo_acumulado?d.gd.saldo_acumulado+' kWh':null,'ok','saldo_acumulado');
+    rKwh+=f('Saldo a expirar',d.gd.saldo_expirar?d.gd.saldo_expirar+' kWh':null,'warn','saldo_expirar');
+    rKwh+=f('Crédito próxima fatura',d.gd.cred_prox?d.gd.cred_prox+' kWh':null,'ok','cred_prox_fat');
+  }
+
+  // ── CARD: DEMANDA kW (só Grupo A) ──
+  let rKw='';
+  if(d.grupoA){
+    rKw+=sep('Demanda Contratada','blue');
+    rKw+=f('KW-FP — Dem. Contratada FP',kW(d.kw.fp_contratada),'blue','dem_contratada');
+    if(d.tarifas.dem_fp!==null) rKw+=f('↳ Tarifa Dem. FP (R$/kW)',R(d.tarifas.dem_fp,6)+' R$/kW','warn','dem_contratada');
+    if(d.val.dem_fp)            rKw+=f('↳ Total Demanda FP',M(d.val.dem_fp),'money','dem_contratada');
+    rKw+=f('KW-P — Dem. Contratada Ponta',kW(d.kw.p_contratada),'blue','dem_contratada');
+    if(d.tarifas.dem_p!==null)  rKw+=f('↳ Tarifa Dem. Ponta (R$/kW)',R(d.tarifas.dem_p,6)+' R$/kW','warn','dem_contratada');
+    if(d.val.dem_ponta)         rKw+=f('↳ Total Demanda Ponta',M(d.val.dem_ponta),'money','dem_contratada');
+
+    rKw+=sep('Demanda Lida (Medida)');
+    rKw+=f('KW-FP (medida)',kW(d.kw.fp_medida),'','dem_medida');
+    rKw+=f('KW-P (medida)',kW(d.kw.p_medida),'','dem_medida');
+
+    rKw+=sep('Demanda Faturada');
+    rKw+=f('KW-FP (faturada)',kW(d.kw.fp_faturada),'','dem_faturada');
+    rKw+=f('KW-P (faturada)',kW(d.kw.p_faturada),'','dem_faturada');
+    const uFP=d.kw.fp_ultra||d.val.ultra_fp;
+    const uP=d.kw.p_ultra||d.val.ultra_p;
+    if(uFP||uP){
+      rKw+=sep('⚠ Ultrapassagem','alert');
+      rKw+=f('KW-FP-U (ultra FP)',kW(d.kw.fp_ultra),'alert','ultrapassagem');
+      if(d.val.ultra_fp) rKw+=f('↳ Total Ultrapassagem FP',M(d.val.ultra_fp),'alert','ultrapassagem');
+      rKw+=f('KW-P-U (ultra Ponta)',kW(d.kw.p_ultra),'alert','ultrapassagem');
+      if(d.val.ultra_p)  rKw+=f('↳ Total Ultrapassagem Ponta',M(d.val.ultra_p),'alert','ultrapassagem');
+    }
+    if(d.kw.fp_medida&&d.kw.fp_contratada&&d.kw.fp_medida>d.kw.fp_contratada)
+      rKw+=sep(`⚠ FP: medida ${R(d.kw.fp_medida,0)}kW > contratada ${R(d.kw.fp_contratada,0)}kW`,'alert');
+    if(d.kw.p_medida&&d.kw.p_contratada&&d.kw.p_medida>d.kw.p_contratada)
+      rKw+=sep(`⚠ Ponta: medida ${R(d.kw.p_medida,0)}kW > contratada ${R(d.kw.p_contratada,0)}kW`,'alert');
+  }
+
+  // ── CARD: REATIVA (UFER/DMCR/UFDR) ──
+  const temReativa=d.reativa.ufer_p||d.reativa.ufer_fp||d.reativa.dmcr_p||d.reativa.dmcr_fp||d.reativa.ufdr_p||d.reativa.ufdr_fp||d.val.ufer_p||d.val.ufer_fp||d.val.ufdr_p||d.val.ufdr_fp;
+  let rReat='';
+  if(temReativa){
+    rReat+=sep('UFER — Energia Reativa Excedente Ponta','warn');
+    rReat+=f('UFER-P (quantidade)',d.reativa.ufer_p?d.reativa.ufer_p+' ufer':null,'warn','ufer');
+    if(d.tarifas.ufer_p!==null) rReat+=f('↳ Tarifa UFER-P (R$/ufer)',R(d.tarifas.ufer_p,6)+' R$/ufer','warn','ufer');
+    if(d.val.ufer_p)            rReat+=f('↳ Total UFER-P cobrado',M(d.val.ufer_p),'alert','ufer');
+
+    rReat+=sep('UFER — Energia Reativa Excedente Fora de Ponta','warn');
+    rReat+=f('UFER-FP (quantidade)',d.reativa.ufer_fp?d.reativa.ufer_fp+' ufer':null,'warn','ufer');
+    if(d.tarifas.ufer_fp!==null) rReat+=f('↳ Tarifa UFER-FP (R$/ufer)',R(d.tarifas.ufer_fp,6)+' R$/ufer','warn','ufer');
+    if(d.val.ufer_fp)            rReat+=f('↳ Total UFER-FP cobrado',M(d.val.ufer_fp),'alert','ufer');
+
+    rReat+=sep('DMCR — Demanda Reativa');
+    rReat+=f('DMCR-P (Ponta)',d.reativa.dmcr_p?d.reativa.dmcr_p+' kVAr':null,'','dmcr');
+    rReat+=f('DMCR-FP (Fora de Ponta)',d.reativa.dmcr_fp?d.reativa.dmcr_fp+' kVAr':null,'','dmcr');
+
+    rReat+=sep('UFDR — Demanda Reativa Excedente Ponta');
+    rReat+=f('UFDR-P (quantidade)',d.reativa.ufdr_p?d.reativa.ufdr_p+' ufdr':null,'warn','ufdr');
+    if(d.tarifas.ufdr_p!==null) rReat+=f('↳ Tarifa UFDR-P (R$/ufdr)',R(d.tarifas.ufdr_p,6)+' R$/ufdr','warn','ufdr');
+    if(d.val.ufdr_p)            rReat+=f('↳ Total UFDR-P cobrado',M(d.val.ufdr_p),'alert','ufdr');
+
+    rReat+=sep('UFDR — Demanda Reativa Excedente Fora de Ponta');
+    rReat+=f('UFDR-FP (quantidade)',d.reativa.ufdr_fp?d.reativa.ufdr_fp+' ufdr':null,'warn','ufdr');
+    if(d.tarifas.ufdr_fp!==null) rReat+=f('↳ Tarifa UFDR-FP (R$/ufdr)',R(d.tarifas.ufdr_fp,6)+' R$/ufdr','warn','ufdr');
+    if(d.val.ufdr_fp)            rReat+=f('↳ Total UFDR-FP cobrado',M(d.val.ufdr_fp),'alert','ufdr');
+
+    // Equatorial MA: Reativo Excedente Reservado (RV)
+    if(d.reativa.ufer_rv||d.val.ufer_rv){
+      rReat+=sep('Reativo Excedente Reservado (RV)','warn');
+      rReat+=f('Reat. Exced. RV (kVAr)',d.reativa.ufer_rv?d.reativa.ufer_rv+' kVAr':null,'warn','ufer');
+      if(d.tarifas.reativo_rv!==null) rReat+=f('↳ Tarifa Reat. RV (R$/kVAr)',R(d.tarifas.reativo_rv,6)+' R$/kVAr','warn','ufer');
+      if(d.val.ufer_rv) rReat+=f('↳ Total Reat. RV cobrado',M(d.val.ufer_rv),'alert','ufer');
+    }
+  }
+
+  // ── CARD: VALORES COBRADOS ──
+  let rVal='';
+  if(d.grupoA){
+    const temP=d.val.consumo_tusd_p||d.val.consumo_te_p||d.val.consumo_comp_p;
+    const temFP=d.val.consumo_tusd_fp||d.val.consumo_te_fp||d.val.consumo_comp_fp;
+    // Equatorial MA: compensado ponta/FP
+    if(temP||temFP){
+      if(temP){
+        rVal+=sep('Consumo Ponta','blue');
+        rVal+=fAlways('TUSD Ponta',M(d.val.consumo_tusd_p),'money','consumo_tusd_p');
+        rVal+=fAlways('TE Ponta',M(d.val.consumo_te_p),'money','consumo_te_p');
+        if(d.val.consumo_comp_p) rVal+=f('Consumo Compensado Ponta',M(d.val.consumo_comp_p),'money','kwh_p');
+      }
+      if(temFP){
+        rVal+=sep('Consumo Fora de Ponta');
+        rVal+=fAlways('TUSD FP',M(d.val.consumo_tusd_fp),'money','consumo_tusd_fp');
+        rVal+=fAlways('TE FP',M(d.val.consumo_te_fp),'money','consumo_te_fp');
+        if(d.val.consumo_comp_fp) rVal+=f('Consumo Compensado FP',M(d.val.consumo_comp_fp),'money','kwh_fp');
+      }
+    }
+    if(d.val.consumo_reservado){
+      rVal+=sep('Consumo Reservado');
+      rVal+=f('Consumo Reservado (kWh)',M(d.val.consumo_reservado),'money');
+    }
+    if(d.val.consumo_tusd_int){rVal+=sep('Consumo Intermediário');rVal+=f('TUSD Interm.',M(d.val.consumo_tusd_int),'money');rVal+=f('TE Interm.',M(d.val.consumo_te_int),'money')}
+    if(!temP&&!temFP){
+      rVal+=sep('Consumo');
+      rVal+=fAlways('Consumo TUSD',M(d.val.consumo_tusd),'money','consumo_tusd');
+      rVal+=fAlways('Consumo TE',M(d.val.consumo_te),'money','consumo_te');
+    }
+    rVal+=sep('Demanda');
+    rVal+=f('Demanda Ativa / FP',M(d.val.dem_fp),'money','dem_contratada');
+    rVal+=f('Demanda Ponta',M(d.val.dem_ponta),'money','dem_contratada');
+    if(d.val.dem_geracao) rVal+=f('Demanda de Geração',M(d.val.dem_geracao),'money','dem_contratada');
+    rVal+=f('Ultrapassagem FP',M(d.val.ultra_fp),'alert','ultrapassagem');
+    rVal+=f('Ultrapassagem Ponta',M(d.val.ultra_p),'alert','ultrapassagem');
+    // reativos no card de valores
+    if(d.val.ufer_p||d.val.ufer_fp||d.val.ufer_rv){
+      rVal+=sep('Reativos Excedentes','warn');
+      rVal+=f('Reativo Excedente Ponta',M(d.val.ufer_p),'alert','ufer');
+      rVal+=f('Reativo Excedente FP',M(d.val.ufer_fp),'alert','ufer');
+      if(d.val.ufer_rv) rVal+=f('Reativo Excedente Reservado',M(d.val.ufer_rv),'alert','ufer');
+    }
+  }else{
+    rVal+=sep('Consumo');
+    rVal+=fAlways('Consumo TUSD',M(d.val.consumo_tusd),'money','consumo_tusd');
+    rVal+=fAlways('Consumo TE',M(d.val.consumo_te),'money','consumo_te');
+  }
+  if(d.val.beneficio_liq){
+    rVal+=sep('Benefícios','ok');
+    rVal+=f('Benefício Tarifário Líquido','-'+M(d.val.beneficio_liq),'ok');
+  }
+  if(d.val.ajuste_avaria) rVal+=f('Ajuste Avaria',M(d.val.ajuste_avaria),'warn');
+  if(d.val.adicional_am||d.val.adicional_verm1||d.val.adicional_verm2){
+    rVal+=sep('Adicionais de bandeira');
+    rVal+=f('Adicional Amarelo',M(d.val.adicional_am),'warn','adicional_am');
+    rVal+=f('Adicional Vermelho 1',M(d.val.adicional_verm1),'alert','adicional_verm1');
+    rVal+=f('Adicional Vermelho 2',M(d.val.adicional_verm2),'alert','adicional_verm2');
+  }
+  rVal+=sep('Encargos');
+  rVal+=f('CIP Municipal',M(d.val.cip),'money','cip');
+  rVal+=f('Locação de Equipamento',M(d.val.loc_equip),'money','loc_equip');
+  rVal+=f('ESS',M(d.val.ess),'money','ess');
+  rVal+=f('ERS',M(d.val.ers),'money','ers');
+  rVal+=f('PROINFA',M(d.val.proinfa),'money','proinfa');
+  rVal+=f('CDE',M(d.val.cde),'money','cde');
+  if(d.val.cap_emergencial||d.val.multa_cap_emerg){
+    rVal+=sep('Capacidade Emergencial');
+    rVal+=f('Capacidade Emergencial',M(d.val.cap_emergencial),'warn','cap_emergencial');
+    rVal+=f('Multa Cap. Emergencial',M(d.val.multa_cap_emerg),'alert','multa_cap_emerg');
+  }
+  rVal+=sep('Atrasos');
+  rVal+=f('Multa por atraso',M(d.val.multa),'alert','multa');
+  rVal+=f('Juros moratórios',M(d.val.juros),'alert','juros');
+  rVal+=f('Atualização monetária',M(d.val.correcao),'money','correcao');
+  if(d.val.cred_sub_tax||d.val.sub_tax){
+    rVal+=sep('Ajustes tributários');
+    rVal+=f('CRED_SUB_TAX',M(d.val.cred_sub_tax),'ok','cred_sub_tax');
+    rVal+=f('SUB_TAX',M(d.val.sub_tax),'warn','sub_tax');
+  }
+  if(d.val.energia_inject||d.val.cred_usados){
+    rVal+=sep('Créditos GD','ok');
+    rVal+=f('Energia Injetada (crédito)',d.val.energia_inject?'-'+M(d.val.energia_inject):null,'ok','energia_injetada');
+    rVal+=f('Créditos GD compensados',d.val.cred_usados?'-'+M(d.val.cred_usados):null,'ok','cred_usados');
+  }
+  rVal+=sep('TOTAL');
+  rVal+=f('TOTAL A PAGAR',M(d.totais.total),'money');
+
+  // ── CARD: IMPOSTOS ──
+  const tiIcms=d.imp.icms_v||0;
+  const tiPis=d.imp.pis_v||0;
+  const tiCof=d.imp.cofins_v||0;
+  const tiPisCof=d.imp.pis_cofins_v||(tiPis+tiCof);
+  const tiTotal=tiIcms+(d.imp.pis_cofins_v||(tiPis+tiCof));
+  const pct=d.totais.total&&tiTotal>0?(tiTotal/d.totais.total*100).toFixed(1)+'%':null;
+
+  const rImp=
+    sep('ICMS — Imposto Estadual')+
+    f('ICMS-BC — Base de cálculo',M(d.imp.icms_bc),'money','icms_bc')+
+    f('ICMS-AE — Alíquota estadual',Pct(d.imp.icms_ae),'warn','icms_ae')+
+    f('ICMS-AD — Alíquota c/ dedução',Pct(d.imp.icms_ad),'warn','icms_ad')+
+    f('ICMS-V — Valor cobrado',M(d.imp.icms_v),'money','icms_v')+
+    sep('PIS — Federal')+
+    f('PIS — Base de cálculo',M(d.imp.pis_base),'money','pis_ali')+
+    f('PIS — Alíquota',Pct(d.imp.pis_ali),'warn','pis_ali')+
+    f('PIS-V — Valor cobrado',M(d.imp.pis_v),'money','pis_v')+
+    sep('COFINS — Federal')+
+    f('COFINS — Base de cálculo',M(d.imp.cofins_base),'money','cofins_ali')+
+    f('COFINS — Alíquota',Pct(d.imp.cofins_ali),'warn','cofins_ali')+
+    f('COFINS-V — Valor cobrado',M(d.imp.cofins_v),'money','cofins_v')+
+    sep('PIS+COFINS combinado')+
+    f('PIS-COFINS-A — Alíquota combinada',Pct(d.imp.pis_cofins_a),'warn','pis_cofins_a')+
+    f('PIS-COFINS-V — Valor combinado',M(d.imp.pis_cofins_v),'money','pis_cofins_v')+
+    sep('Resumo')+
+    f('Total em impostos',M(tiTotal),'alert','total_imp')+
+    f('% da fatura em impostos',pct,'warn','pct_imp');
+
+  // ── CARD: COMPENSAÇÕES DIC/FIC ──
+  const compTotal2=(d.comp.cu_dic_mensal||0)+(d.comp.cu_dic_trim||0)+(d.comp.cu_dic_anual||0)+(d.comp.cu_fic_mensal||0)+(d.comp.cu_fic_trim||0)+(d.comp.cu_dmic||0)+(d.comp.cu_dicri||0);
+  const rComp=
+    sep('DIC — Interrupções por duração')+
+    f('CU-DIC-Mensal',M(d.comp.cu_dic_mensal),'ok','cu_dic_mensal')+
+    f('CU-DIC-Trimestral',M(d.comp.cu_dic_trim),'ok','cu_dic_trim')+
+    f('CU-DIC-Anual',M(d.comp.cu_dic_anual),'ok','cu_dic_anual')+
+    sep('FIC — Interrupções por frequência')+
+    f('CU-FIC-Mensal',M(d.comp.cu_fic_mensal),'ok','cu_fic_mensal')+
+    f('CU-FIC-Trimestral',M(d.comp.cu_fic_trim),'ok','cu_fic_trim')+
+    sep('DMIC / DICRI')+
+    f('CU-DMIC',M(d.comp.cu_dmic),'ok','cu_dmic')+
+    f('CU-DICRI',M(d.comp.cu_dicri),'ok','cu_dicri')+
+    sep('Saldos')+
+    f('Crédito próxima fatura',M(d.comp.cred_prox_fat),'ok','cred_prox_fat')+
+    f('Saldo anterior',M(d.comp.saldo_anterior),'ok','saldo_anterior')+
+    (compTotal2>0?f('Total compensações',M(compTotal2),'ok'):'');
+
+  // ── CARD: INDICADORES DIC/FIC/DMIC ──
+  const rInd=
+    sep('Data de apuração')+
+    f('I.DataApuracao',d.ind.data_apuracao)+
+    sep('I.DIC — Duração das Interrupções')+
+    f('I.DIC-Mês (padrão)',d.ind.dic_mes?d.ind.dic_mes+'h':null,'','i_dic')+
+    f('I.DIC-Trimestral',d.ind.dic_trim?d.ind.dic_trim+'h':null,'','i_dic')+
+    f('I.DIC-Anual',d.ind.dic_anual?d.ind.dic_anual+'h':null,'','i_dic')+
+    f('I.DIC-Realizado',d.ind.dic_real?d.ind.dic_real+'h':null,(d.ind.dic_real>d.ind.dic_mes)?'alert':'ok','i_dic')+
+    sep('I.FIC — Frequência das Interrupções')+
+    f('I.FIC-Mês (padrão)',d.ind.fic_mes?d.ind.fic_mes+' vezes':null,'','i_fic')+
+    f('I.FIC-Trimestral',d.ind.fic_trim?d.ind.fic_trim+' vezes':null,'','i_fic')+
+    f('I.FIC-Anual',d.ind.fic_anual?d.ind.fic_anual+' vezes':null,'','i_fic')+
+    f('I.FIC-Realizado',d.ind.fic_real?d.ind.fic_real+' vezes':null,(d.ind.fic_real>d.ind.fic_mes)?'alert':'ok','i_fic')+
+    sep('I.DMIC — Máximo contínuo')+
+    f('I.DMIC-Mês (padrão)',d.ind.dmic_mes?d.ind.dmic_mes+'h':null,'','i_dmic')+
+    f('I.DMIC-Realizado',d.ind.dmic_real?d.ind.dmic_real+'h':null,(d.ind.dmic_real>d.ind.dmic_mes)?'alert':'ok','i_dmic')+
+    sep('I.DICRI / I.EUSD')+
+    f('I.DICRI-Mês',d.ind.dicri_mes?d.ind.dicri_mes+'h':null,'','i_dicri')+
+    f('I.DICRI-Realizado',d.ind.dicri_real?d.ind.dicri_real+'h':null,'','i_dicri')+
+    f('I.EUSD-Realizado',M(d.ind.eusd_real),'money','i_eusd');
+
+  // ── CARD: BENEFÍCIOS ──
+  let rBen='';
+  if(d.benef.irrigante)   rBen+=f('Rural / Irrigante','Detectado ✅','ok','benef_irrigante');
+  if(d.benef.baixa_renda) rBen+=f('Tarifa Social (Baixa Renda)','Detectada ✅','ok','benef_baixa_renda');
+  if(d.benef.cooperativa) rBen+=f('Cooperativa','Detectada ✅','ok','benef_cooperativa');
+  if(d.benef.val_benef)   rBen+=f('Valor do benefício/desconto',M(d.benef.val_benef),'ok');
+
+  // ── CARD: TARIFAS ──
+  let rTar='';
+  if(d.grupoA){
+    rTar+=sep('Consumo Ponta (R$/kWh)');
+    rTar+=f('TUSD Ponta',d.tarifas.tusd_p,'','consumo_tusd_p');
+    rTar+=f('TE Ponta',d.tarifas.te_p,'','consumo_te_p');
+    rTar+=sep('Consumo FP (R$/kWh)');
+    rTar+=f('TUSD FP',d.tarifas.tusd_fp,'','consumo_tusd_fp');
+    rTar+=f('TE FP',d.tarifas.te_fp,'','consumo_te_fp');
+    rTar+=sep('Demanda (R$/kW)');
+    rTar+=f('Dem. FP (R$/kW)',d.tarifas.dem_fp,'','dem_contratada');
+    rTar+=f('Dem. Ponta (R$/kW)',d.tarifas.dem_p,'','dem_contratada');
+  }else{
+    rTar+=f('TUSD (R$/kWh)',d.tarifas.tusd,'','consumo_tusd');
+    rTar+=f('TE (R$/kWh)',d.tarifas.te,'','consumo_te');
+    const ct=d.tarifas.tusd&&d.tarifas.te?(d.tarifas.tusd+d.tarifas.te).toFixed(6):null;
+    rTar+=f('Custo total/kWh',ct);
+  }
+
+  // ── MONTAR LAYOUT ──
+  function app(el){if(el)cont.appendChild(el)}
+  function grid(...cards){
+    const g=document.createElement('div');g.className='grid';
+    cards.forEach(c=>{if(c)g.appendChild(c)});
+    if(g.children.length)cont.appendChild(g);
+  }
+
+  grid(card('👤','Identificação','',rId),card('📋','Período e Fatura','',rFat));
+  grid(card('💰','Valores Cobrados','passe o mouse em cada item',rVal),card('⚡','Consumo (kWh)',d.grupoA?'Ponta / FP':'',rKwh));
+
+  if(d.grupoA&&rKw.trim()) grid(card('📊','Demanda (kW)','contratada · medida · faturada',rKw,'ga'),card('📐','Tarifas','R$/kWh e R$/kW',rTar,'ga'));
+  else if(rTar.trim()) grid(card('📐','Tarifas (R$/kWh)','',rTar));
+
+  if(temReativa&&rReat.trim()) grid(card('⚡','Energia Reativa','UFER · DMCR · UFDR',rReat,'ga'));
+
+  grid(card('🏛️','Impostos','ICMS-BC · ICMS-AE · ICMS-V · PIS · COFINS',rImp,'imp'));
+
+  if(rComp.trim()&&compTotal2>0) grid(card('💚','Compensações DIC/FIC/DMIC','créditos por interrupção',rComp,'benef'));
+  if(rBen.trim()) grid(card('🎁','Benefícios Tarifários','',rBen,'benef'));
+
+  // histórico
+  if(d.historico.length){
+    const maxK=Math.max(...d.historico.map(h=>h.kwh),1);
+    const ref=d.periodo.referencia||'';
+    const refM=ref.split('/')[0]||'',refA=ref.split('/')[1]||'';
+    const MP={JAN:'01',FEV:'02',MAR:'03',ABR:'04',MAI:'05',JUN:'06',JUL:'07',AGO:'08',SET:'09',OUT:'10',NOV:'11',DEZ:'12'};
+    const bars=d.historico.map(h=>{
+      const pts=h.mes.split('/'),isA=MP[pts[0]]===refM&&pts[1]===refA;
+      const med=h.media?`<span class="hmed">${h.media}/d</span>`:'';
+      return`<div class="hist-row"><span class="hm">${h.mes}</span><div class="ht"><div class="hb${isA?' atual':''}" style="width:${(h.kwh/maxK*100).toFixed(1)}%"></div></div><span class="hn">${h.kwh}</span>${med}</div>`;
+    }).join('');
+    const hc=document.createElement('div');hc.className='card';hc.style.marginBottom='12px';
+    hc.innerHTML=`<div class="card-head"><span class="ch-icon">📈</span><span class="ch-title">Histórico de Consumo</span><span class="ch-sub">kWh/mês · laranja = atual</span></div><div class="card-body">${bars}</div>`;
+    cont.appendChild(hc);
+  }
+
+  if(rInd.trim()) grid(card('📡','Indicadores de Qualidade','DIC · FIC · DMIC · DICRI · EUSD',rInd));
+}
+function switchTab(name){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pane-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+</script>
+</html>

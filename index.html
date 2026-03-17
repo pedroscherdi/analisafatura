@@ -431,7 +431,7 @@ function extrair(t){
     data_lp:         get([/(?:Data\s+(?:de\s+)?Emiss[aã]o|Emiss[aã]o|Data\s+L\.?\s*P\.?)[:\s]+(\d{2}\/\d{2}\/\d{4})/i]),
     data_v:          get([/(?:Vencimento|Venc\.)[:\s]+(\d{2}\/\d{2}\/\d{4})/i]),
     referencia:      get([/(?:Conta m[eê]s|Refer[eê]ncia)[:\s]+(\d{2}\/\d{4})/i,/(\d{2}\/\d{4})\s*(?:Vencimento|Venc\.)/i]),
-    numero_dias:     num([/(\d{2})\s*dias?\s*(?:de consumo|faturado)/i,/N[°º]\s*de Dias?\s+(\d{2})/i]),
+    numero_dias:     num([/(\d{2})\s*dias?\s*(?:de consumo|faturado)/i,/N[°º]\s*de Dias?\s+(\d{2})/i,/\d{2}\/\d{2}\/\d{4}\s+(\d{2})\s+\d{2}\/\d{2}\/\d{4}/i]),
     nota_fiscal:     get([/NOTA FISCAL N[°o]\.\s*(\d{7,10})/i,/(?:Nota Fiscal|NF)[:\s#nº°.]*(\d{7,10})/i]),
     bandeira:        get([/(?:Band\.?\s*Tarif\.?|Periodos Band\.Tarif\.)[^:]*:\s*([A-Za-záéíóú]+(?:\s+\d)?)/i,/(Verde|Amarela|Vermelha\s*\d?|Escassez)/i]),
     protocolo:       get([/Protocolo[:\s]+(\d{14,20})/i]),
@@ -440,7 +440,7 @@ function extrair(t){
 
   // ── TOTAIS ──
   const totais={
-    total:          money([/Total\s+a\s+pagar[:\s]+R?\$?\s*([\d\.]+,\d{2})/i,/Valor\s+do\s+Documento[:\s]+R?\$?\s*([\d\.]+,\d{2})/i,/\(=\)\s*Valor\s+Cobrado\s+([\d\.]+,\d{2})/i]),
+    total:          money([/Total\s+a\s+pagar[:\s]+R?\$?\s*([\d\.]+,\d{2})/i,/Valor\s+do\s+Documento[:\s]+R?\$?\s*([\d\.]+,\d{2})/i,/\(=\)\s*Valor\s+Cobrado\s+([\d\.]+,\d{2})/i,/R\$\s*([\d\.]+,\d{2})\s+NOTA FISCAL/i,/\bTOTAL\b\s+(\d[\d\.]*,\d{2})(?!\s*%)/i]),
     outros_creditos:money([/Outros\s+Cr[eé]ditos?[^\d]*([\d\.]+,\d{2})/i]),
     outros_custos:  money([/Outros\s+Custos?[^\d]*([\d\.]+,\d{2})/i]),
   };
@@ -486,7 +486,9 @@ function extrair(t){
     fp:   num([/Consumo\s+Ativo\s+FP\s+Reg[^k]*([\d\.]+,\d{2})\s*kWh/i,
                /Consumo\s+Fora\s+Ponta\s+[^k]*([\d\.]+,\d{2})\s*kWh/i,
                /CONS(?:UMO)?\s+(?:FP|FORA)[^\d]*(\d{1,6}(?:\.\d{3})*,\d{2})\s*kWh/i]),
-    b:    num([/CONS(?:UMO)?\s+(?:B\b|BAIXA\s+TENS)[^\d]*(\d{2,6})\s*kWh/i]),
+    b:    num([/CONS(?:UMO)?\s+(?:B\b|BAIXA\s+TENS)[^\d]*(\d{2,6})\s*kWh/i,
+               /CONSUMO\s+TUSD\s+kWh\s+(\d{1,6})\s+[\d,]{5}/i,
+               /CONSUMO\s+kWh\s+\w+\s+\d+\s+\d+\s+\d+\s+(\d{1,6})\b/i]),
     reservado: num([/Consumo\s+Ativo\s+RV\s+Reg[^k]*([\d\.]+,\d{2})\s*kWh/i,
                     /Consumo\s+Reservado\s+[^k]*([\d\.]+,\d{2})\s*kWh/i]),
     // bandeira amarela
@@ -500,8 +502,8 @@ function extrair(t){
     total:   num([/kWh\s+[Tt]otal[^\d]*(\d{2,6})/i]),
     media:   num([/Consumo\s+M[eé]dio\s+Di[aá]rio\s*\(kWh\)[:\s]*([\d,]+)/i,
                   /(?:Consumo Di[aá]rio|M[eé]dia Di[aá]ria)[:\s]+([\d,]+)/i]),
-    leit_ant:num([/Leitura\s+Anterior[:\s]+\d{2}\/\d{2}\/\d{4}\s+(\d{4,8})/i]),
-    leit_atu:num([/Leitura\s+Atual[:\s]+\d{2}\/\d{2}\/\d{4}\s+(\d{4,8})/i]),
+    leit_ant:num([/Leitura\s+Anterior[:\s]+\d{2}\/\d{2}\/\d{4}\s+(\d{4,8})/i,/CONSUMO\s+kWh\s+\w+\s+(\d{4,8})\s+\d{4,8}\s+\d/i]),
+    leit_atu:num([/Leitura\s+Atual[:\s]+\d{2}\/\d{2}\/\d{4}\s+(\d{4,8})/i,/CONSUMO\s+kWh\s+\w+\s+\d{4,8}\s+(\d{4,8})\s+\d/i]),
     // geração / injetada
     g:       num([/Consumo\s+Ativo\s+Gerado\s+FP[^k]*([\d\.]+,\d{2})\s*kWh/i,
                   /Ener\.\s+Inje\.\s+F\.\s+Ponta[^k]*([\d\.]+,\d{2})\s*kWh/i,
@@ -566,8 +568,8 @@ function extrair(t){
   const _iBandeira   = itemFatura(/Adicional\s+Bandeira/i);
 
   const val={
-    consumo_tusd:    money([/\bCONSUMO TUSD\b[^\d]*([\d\.]+,\d{2})/i]),
-    consumo_te:      money([/\bCONSUMO TE\b[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_tusd:    money([/CONSUMO\s+TUSD\s+kWh\s+\d+\s+[\d,]+\s+([\d\.]+,\d{2})/i,/\bCONSUMO TUSD\b[^\d]*([\d\.]+,\d{2})/i]),
+    consumo_te:      money([/CONSUMO\s+TE\s+kWh\s+\d+\s+[\d,]+\s+([\d\.]+,\d{2})/i,/\bCONSUMO TE\b[^\d]*([\d\.]+,\d{2})/i]),
     consumo_tusd_p:  money([/CONS(?:UMO)?\s+TUSD\s+(?:PONTA|P\b)[^\d]*([\d\.]+,\d{2})/i,/TUSD\s+PONTA[^\d]*([\d\.]+,\d{2})/i]),
     consumo_te_p:    money([/CONS(?:UMO)?\s+TE\s+(?:PONTA|P\b)[^\d]*([\d\.]+,\d{2})/i,/TE\s+PONTA[^\d]*([\d\.]+,\d{2})/i]),
     consumo_tusd_fp: money([/CONS(?:UMO)?\s+TUSD\s+(?:FORA|FP)[^\d]*([\d\.]+,\d{2})/i,/TUSD\s+(?:FORA|FP)[^\d]*([\d\.]+,\d{2})/i]),
@@ -600,9 +602,9 @@ function extrair(t){
     sub_tax:         money([/\bSUB_TAX\b|Subtribut[^\d]*([\d\.]+,\d{2})/i]),
     cip:             money([/\bCIP\b[^\d]*([\d\.]+,\d{2})/i,/Ilumina[çc][aã]o P[úu]blica[^\d]*([\d\.]+,\d{2})/i]),
     loc_equip:       money([/Loca[çc][aã]o\s+(?:de\s+)?Equipamento[^\d]*([\d\.]+,\d{2})/i]),
-    multa:           money([/MULTA CONTA ANTERIOR[^\d]*([\d\.]+,\d{2})/i,/(?:Multa|MULTA)[^\d]*([\d\.]+,\d{2})/i]),
-    juros:           money([/JUROS CONTA ANTERIOR[^\d]*([\d\.]+,\d{2})/i,/(?:Juros|JUROS)[^\d]*([\d\.]+,\d{2})/i]),
-    correcao:        money([/(?:CORRECAO MONETARIA|AtualizMon|Atualiza[çc][aã]o Monet[aá]ria|Corre[çc][aã]o Monet[aá]ria)[^\d]*([\d\.]+,\d{2})/i]),
+    multa:           money([/MULTA CONTA ANTERIOR\s+([\d\.]+,\d{2})/i,/MULTA CONTA ANTERIOR[^\d]{0,25}?([\d\.]+,\d{2})/i,/(?:Multa|MULTA)[^\d]{0,25}?([\d\.]+,\d{2})/i]),
+    juros:           money([/JUROS CONTA ANTERIOR\s+([\d\.]+,\d{2})/i,/JUROS CONTA ANTERIOR[^\d]{0,25}?([\d\.]+,\d{2})/i,/(?:Juros|JUROS)[^\d]{0,25}?([\d\.]+,\d{2})/i]),
+    correcao:        money([/(?:CORRECAO MONETARIA|AtualizMon|Atualiza[çc][aã]o Monet[aá]ria|Corre[çc][aã]o Monet[aá]ria)[^\d]{0,25}?([\d\.]+,\d{2})/i]),
     multa_cap_emerg: money([/Multa\s+(?:Cap\.?\s*Emerg|Capac\.?\s*Emerg)[^\d]*([\d\.]+,\d{2})/i]),
     cap_emergencial: money([/Capacidade\s+Emergencial[^\d]*([\d\.]+,\d{2})/i,/\bCapEmergencial\b[^\d]*([\d\.]+,\d{2})/i]),
     ess:             money([/\bESS\b[^\d]*([\d\.]+,\d{2})/i]),
@@ -688,6 +690,18 @@ function extrair(t){
     return { base: null, ali: null, valor: null };
   }
 
+  // ── IMPOSTOS CEEE Equatorial: "ICMS COFINS PIS <b1> <b2> <b3> <a1>% <a2>% <a3>% <v1> <v2> <v3>" ──
+  const _ceeeImp = (()=>{
+    const mc=s.match(/ICMS\s+COFINS\s+PIS\s+([\d\.]+,\d{2})\s+([\d\.]+,\d{2})\s+([\d\.]+,\d{2})\s+([\d,]+)%\s+([\d,]+)%\s+([\d,]+)%[^\d]{0,20}([\d\.]+,\d{2})\s+([\d\.]+,\d{2})\s+([\d\.]+,\d{2})/i);
+    if(!mc)return null;
+    const p=v=>parseFloat(v.replace(/\./g,'').replace(',','.'));
+    return{
+      icms:{base:p(mc[1]),ali:p(mc[4]),valor:p(mc[7])},
+      cofins:{base:p(mc[2]),ali:p(mc[5]),valor:p(mc[8])},
+      pis:{base:p(mc[3]),ali:p(mc[6]),valor:p(mc[9])}
+    };
+  })();
+
   const _icms  = extrairLinhaImposto(/\bICMS\b/i);
   const _pis   = extrairLinhaImposto(/\bPIS\b(?!\s*[\/+]COFINS)/i);
   const _cof   = extrairLinhaImposto(/\bCOFINS\b/i);
@@ -700,7 +714,7 @@ function extrair(t){
       /Base\s+(?:de\s+)?[Cc][áa]lculo\s+ICMS[^\d]*([\d\.]+,\d{2})/i,
       /Base\s+ICMS[^\d]*([\d\.]+,\d{2})/i,
       /ICMS\s+([\d\.]+,\d{2})\s+[\d,]+[%\s]/i,
-    ]) || _icms.base,
+    ]) || (_ceeeImp&&_ceeeImp.icms.base) || _icms.base,
 
     // Alíquota ICMS
     icms_ae: num([
@@ -708,7 +722,7 @@ function extrair(t){
       /Al[íi]quota\s+ICMS[^\d]*([\d,]+)\s*%/i,
       /Al[íi]q\.?\s*ICMS[^\d]*([\d,]+)\s*%/i,
       /ICMS[^\d]*([\d,]+)\s*%/i,
-    ]) || _icms.ali,
+    ]) || (_ceeeImp&&_ceeeImp.icms.ali) || _icms.ali,
 
     icms_ad: num([/ICMS[-\s]*AD[^\d]*([\d,]+)/i]),
 
@@ -721,7 +735,7 @@ function extrair(t){
       /ICMS\s+[\d\.]+,\d{2}\s+[\d,]+\s*%?\s*([\d\.]+,\d{2})/i,
       /ICMS\s+[\d,]+\s*%\s+[\d\.]+,\d{2}\s+([\d\.]+,\d{2})/i,
       /\bICMS\b[^\n\d]*([\d\.]+,\d{2})\s*$/im,
-    ]) || _icms.valor,
+    ]) || (_ceeeImp&&_ceeeImp.icms.valor) || _icms.valor,
 
     // PIS+COFINS combinado (algumas distribuidoras mostram junto)
     pis_cofins_a: num([
@@ -740,37 +754,37 @@ function extrair(t){
     pis_ali: num([
       /PIS[-\s]*(?:Ali|Alíquota)[^\d]*([\d,]+)\s*%/i,
       /(?<![A-Z])PIS\b(?!\s*[\/+])[^\d]*([\d,]+)\s*%/i,
-    ]) || _pis.ali,
+    ]) || (_ceeeImp&&_ceeeImp.pis.ali) || _pis.ali,
 
     pis_base: money([
       /Base\s+(?:de\s+)?[Cc][áa]lculo\s+PIS[^\d]*([\d\.]+,\d{2})/i,
       /PIS\s+([\d\.]+,\d{2})\s+[\d,]+\s*%/i,
-    ]) || _pis.base,
+    ]) || (_ceeeImp&&_ceeeImp.pis.base) || _pis.base,
 
     pis_v: money([
       /PIS[-\s]*V\b[^\d]*([\d\.]+,\d{2})/i,
       /Valor\s+(?:do\s+)?PIS[^\d]*([\d\.]+,\d{2})/i,
       /\bPIS\b(?!\s*[\/+])[^\n\d]*([\d\.]+,\d{2})\s*$/im,
       /PIS\s+[\d\.]+,\d{2}\s+[\d,]+\s*%?\s*([\d\.]+,\d{2})/i,
-    ]) || _pis.valor,
+    ]) || (_ceeeImp&&_ceeeImp.pis.valor) || _pis.valor,
 
     // COFINS separado
     cofins_ali: num([
       /COFINS[-\s]*(?:Ali|Alíquota)[^\d]*([\d,]+)\s*%/i,
       /COFINS[^\d]*([\d,]+)\s*%/i,
-    ]) || _cof.ali,
+    ]) || (_ceeeImp&&_ceeeImp.cofins.ali) || _cof.ali,
 
     cofins_base: money([
       /Base\s+(?:de\s+)?[Cc][áa]lculo\s+COFINS[^\d]*([\d\.]+,\d{2})/i,
       /COFINS\s+([\d\.]+,\d{2})\s+[\d,]+\s*%/i,
-    ]) || _cof.base,
+    ]) || (_ceeeImp&&_ceeeImp.cofins.base) || _cof.base,
 
     cofins_v: money([
       /COFINS[-\s]*V\b[^\d]*([\d\.]+,\d{2})/i,
       /Valor\s+(?:do\s+)?COFINS[^\d]*([\d\.]+,\d{2})/i,
       /\bCOFINS\b[^\n\d]*([\d\.]+,\d{2})\s*$/im,
       /COFINS\s+[\d\.]+,\d{2}\s+[\d,]+\s*%?\s*([\d\.]+,\d{2})/i,
-    ]) || _cof.valor,
+    ]) || (_ceeeImp&&_ceeeImp.cofins.valor) || _cof.valor,
   };
 
   // Fallback: se não achou PIS/COFINS separado mas achou combinado, distribui
@@ -825,6 +839,27 @@ function extrair(t){
   while((m=rH.exec(s))!==null) historico.push({mes:m[2].substring(0,3)+'/'+m[1],kwh:parseFloat(m[4].replace(',','.')),dias:parseInt(m[3]),media:parseFloat(m[5].replace(',','.'))});
   if(!historico.length) while((m=rH2.exec(s))!==null) historico.push({mes:m[1]+'/'+m[2],kwh:parseFloat(m[4].replace(',','.')),dias:parseInt(m[3])});
   if(!historico.length) while((m=rH3.exec(s))!==null) historico.push({mes:m[2].substring(0,3)+'/'+m[1],kwh:parseFloat(m[4].replace(',','.'))});
+  // CEEE Equatorial: meses+dias em bloco, depois kWh em bloco, depois média em bloco
+  if(!historico.length){
+    const _ceeeMonRe=/(?:(\d{4})\s+)?(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\s+(\d{2})/gi;
+    const _ceeeMons=[];let _ceeeY=null;let _cm;
+    while((_cm=_ceeeMonRe.exec(s))!==null){
+      if(_cm[1])_ceeeY=parseInt(_cm[1]);
+      if(_ceeeY)_ceeeMons.push({mes:_cm[2].substring(0,3)+'/'+_ceeeY,dias:parseInt(_cm[3]),idx:_ceeeMonRe.lastIndex});
+    }
+    if(_ceeeMons.length>=3){
+      const _lastPos=_ceeeMons[_ceeeMons.length-1].idx;
+      const _rest=s.slice(_lastPos);
+      const _nums=_rest.match(/(\d{1,3},\d{1,2})\b/g)||[];
+      const _n=_ceeeMons.length;
+      const _kwhs=_nums.slice(0,_n);const _meds=_nums.slice(_n,_n*2);
+      _ceeeMons.forEach((e,i)=>{
+        const k=_kwhs[i]?parseFloat(_kwhs[i].replace(',','.')):null;
+        const med=_meds[i]?parseFloat(_meds[i].replace(',','.')):null;
+        if(k!==null)historico.push({mes:e.mes,kwh:k,dias:e.dias,media:med});
+      });
+    }
+  }
 
   // ── DÉBITOS ──
   const debitos=[];

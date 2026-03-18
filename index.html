@@ -143,6 +143,7 @@ footer{text-align:center;padding:18px;font-size:11px;color:#8aaac8;border-top:1p
   <div class="tabs">
     <button class="tab-btn active" id="tab-inicio" onclick="switchTab('inicio')">🏠 Início</button>
     <button class="tab-btn" id="tab-leitor" onclick="switchTab('leitor')">📊 Analisar Fatura</button>
+    <button class="tab-btn" id="tab-simulador" onclick="switchTab('simulador')">🔌 Simula Conta de Energia</button>
   </div>
 
   <!-- TAB: INÍCIO -->
@@ -236,7 +237,75 @@ footer{text-align:center;padding:18px;font-size:11px;color:#8aaac8;border-top:1p
     <div class="raw-box" id="rawBox"></div>
   </div>
   </div><!-- /pane-leitor -->
-</main>
+
+  <!-- TAB: SIMULADOR -->
+  <div class="tab-pane" id="pane-simulador">
+    <div class="welcome-hero" style="padding:28px 20px 20px">
+      <div class="bolt-big" style="font-size:26px">🔌</div>
+      <h2><span>Simula</span> Conta de Energia</h2>
+      <p>Informe quantas horas por dia você usa cada eletrodoméstico e veja o consumo estimado mensal e o custo na sua conta.</p>
+    </div>
+
+    <div style="background:#fff;border:1px solid #d0e0f5;border-radius:12px;padding:18px 20px;margin-bottom:18px;box-shadow:0 1px 6px rgba(13,45,107,.06)">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+        <label style="font-size:13px;font-weight:700;color:#0d2d6b">💰 Tarifa da sua distribuidora (R$/kWh):</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" id="tarifaKwh" value="0.90" step="0.01" min="0.01"
+            style="width:90px;padding:7px 10px;border:1px solid #b0c8e8;border-radius:7px;font-size:14px;font-weight:700;color:#0d2d6b;text-align:center"
+            oninput="calcSimulador()">
+          <span style="font-size:12px;color:#6a8ab0">sugestão: R$ 0,90</span>
+        </div>
+      </div>
+      <p style="font-size:11.5px;color:#8aaac8">Verifique sua fatura real para usar a tarifa exata. O valor sugerido é uma média nacional residencial.</p>
+    </div>
+
+    <div style="background:#fff;border:1px solid #d0e0f5;border-radius:12px;overflow:hidden;box-shadow:0 1px 6px rgba(13,45,107,.06);margin-bottom:18px">
+      <div style="background:#f0f6ff;border-bottom:1px solid #d0e0f5;padding:10px 18px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px">⚡</span>
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#1a3d80">Eletrodomésticos</span>
+        <span style="font-size:10px;color:#8aabcc;margin-left:auto;font-style:italic">Ajuste as horas de uso por dia · 30 dias/mês</span>
+      </div>
+
+      <!-- TABELA HEADER -->
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:0;background:#eef4fc;border-bottom:1px solid #d0e0f5;padding:8px 16px">
+        <span style="font-size:11px;font-weight:700;color:#1a3d80">Eletrodoméstico</span>
+        <span style="font-size:11px;font-weight:700;color:#1a3d80;text-align:center">Potência (W)</span>
+        <span style="font-size:11px;font-weight:700;color:#1a3d80;text-align:center">Horas/dia</span>
+        <span style="font-size:11px;font-weight:700;color:#1a3d80;text-align:right">kWh/mês</span>
+        <span style="font-size:11px;font-weight:700;color:#1a3d80;text-align:right">R$/mês</span>
+      </div>
+
+      <!-- LINHAS DOS APARELHOS -->
+      <div id="simRows"></div>
+    </div>
+
+    <!-- TOTALIZADOR -->
+    <div style="background:linear-gradient(135deg,#0d2d6b,#1a52b8);border-radius:12px;padding:20px 24px;color:#e8f0ff;margin-bottom:18px;box-shadow:0 4px 16px rgba(13,45,107,.25)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:12px;opacity:.65;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Total estimado por mês</div>
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+            <span style="font-size:14px;opacity:.75">⚡ <span id="totalKwh">0,0</span> kWh</span>
+            <span style="font-size:28px;font-weight:800;letter-spacing:-1px">R$ <span id="totalReais">0,00</span></span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;opacity:.55;margin-bottom:4px">Custo médio diário</div>
+          <div style="font-size:18px;font-weight:700">R$ <span id="totalDiario">0,00</span></div>
+        </div>
+      </div>
+      <div style="margin-top:16px;border-top:1px solid rgba(255,255,255,.15);padding-top:12px">
+        <div style="font-size:11px;opacity:.5;margin-bottom:8px">DISTRIBUIÇÃO POR CATEGORIA</div>
+        <div id="catBars" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+    </div>
+
+    <div class="ab blue" style="font-size:12px">
+      <strong>📝 Como usar</strong>
+      Ajuste as horas de uso diário de cada aparelho. Aparelhos desligados (0h) não são contabilizados. A potência padrão é uma estimativa média — aparelhos mais antigos costumam consumir mais. Para mais precisão, verifique a etiqueta do aparelho ou manual.
+    </div>
+  </div><!-- /pane-simulador -->
+
 <footer>Nenhum dado sai do seu computador · Processado 100% localmente via pdf.js · Conforme LGPD · AnalisaFatura</footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -1373,5 +1442,148 @@ function switchTab(name){
   document.getElementById('pane-'+name).classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
 }
+
+// ══════════════════════════════════════════════════════
+// SIMULADOR DE CONTA DE ENERGIA
+// ══════════════════════════════════════════════════════
+const APARELHOS = [
+  // [nome, potência W, horas padrão, categoria, emoji]
+  // Climatização
+  {n:'Ar-condicionado 9.000 BTU',w:900,h:6,cat:'Climatização',e:'❄️'},
+  {n:'Ar-condicionado 12.000 BTU',w:1200,h:4,cat:'Climatização',e:'❄️'},
+  {n:'Ventilador de teto',w:60,h:8,cat:'Climatização',e:'🌀'},
+  // Aquecimento de água
+  {n:'Chuveiro elétrico',w:5500,h:0.5,cat:'Aquecimento',e:'🚿'},
+  {n:'Aquecedor elétrico de ambiente',w:1500,h:2,cat:'Aquecimento',e:'🔥'},
+  // Cozinha
+  {n:'Geladeira (frost free 400L)',w:130,h:24,cat:'Cozinha',e:'🧊'},
+  {n:'Freezer vertical',w:100,h:24,cat:'Cozinha',e:'🧊'},
+  {n:'Forno elétrico / forno convencional',w:1200,h:0.5,cat:'Cozinha',e:'🍳'},
+  {n:'Micro-ondas',w:1200,h:0.25,cat:'Cozinha',e:'📡'},
+  {n:'Cafeteira elétrica',w:800,h:0.25,cat:'Cozinha',e:'☕'},
+  {n:'Liquidificador',w:500,h:0.1,cat:'Cozinha',e:'🥤'},
+  {n:'Fritadeira elétrica (Air Fryer)',w:1500,h:0.3,cat:'Cozinha',e:'🍟'},
+  {n:'Lava-louças',w:1500,h:0.5,cat:'Cozinha',e:'🍽️'},
+  // Lavanderia
+  {n:'Máquina de lavar roupa',w:500,h:0.7,cat:'Lavanderia',e:'👕'},
+  {n:'Ferro de passar roupa',w:1200,h:0.5,cat:'Lavanderia',e:'👔'},
+  {n:'Secadora de roupas',w:2000,h:0.5,cat:'Lavanderia',e:'🌪️'},
+  // Iluminação
+  {n:'Lâmpada LED 9W (por unidade)',w:9,h:6,cat:'Iluminação',e:'💡'},
+  {n:'Lâmpada LED 15W (por unidade)',w:15,h:5,cat:'Iluminação',e:'💡'},
+  // Eletrônicos
+  {n:'Televisão LED 42"',w:80,h:5,cat:'Eletrônicos',e:'📺'},
+  {n:'Televisão LED 55"',w:130,h:4,cat:'Eletrônicos',e:'📺'},
+  {n:'Computador desktop + monitor',w:200,h:4,cat:'Eletrônicos',e:'🖥️'},
+  {n:'Notebook / Laptop',w:60,h:5,cat:'Eletrônicos',e:'💻'},
+  {n:'Videogame (PS4/Xbox)',w:150,h:2,cat:'Eletrônicos',e:'🎮'},
+  {n:'Roteador Wi-Fi',w:10,h:24,cat:'Eletrônicos',e:'📶'},
+  // Outros
+  {n:'Bomba d\'água (uso doméstico)',w:750,h:1,cat:'Outros',e:'💧'},
+  {n:'Aspirador de pó',w:1000,h:0.3,cat:'Outros',e:'🌬️'},
+  {n:'Secador de cabelo',w:2000,h:0.2,cat:'Outros',e:'💇'},
+];
+
+const CAT_COLORS = {
+  'Climatização':'#1a52b8',
+  'Aquecimento':'#d04020',
+  'Cozinha':'#2a8a3a',
+  'Lavanderia':'#6a1a9a',
+  'Iluminação':'#8a6a00',
+  'Eletrônicos':'#1a6a8a',
+  'Outros':'#5a5a7a'
+};
+
+function buildSimulador(){
+  const cont = document.getElementById('simRows');
+  const cats = [...new Set(APARELHOS.map(a=>a.cat))];
+  let html = '';
+  cats.forEach(cat=>{
+    const cor = CAT_COLORS[cat]||'#3a5a80';
+    html += `<div style="padding:5px 16px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:${cor};background:#f7faff;border-bottom:1px solid #e4eef8">${cat}</div>`;
+    APARELHOS.filter(a=>a.cat===cat).forEach((ap,i)=>{
+      const idx = APARELHOS.indexOf(ap);
+      html += `
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:0;border-bottom:1px solid #eef4fb;align-items:center;padding:7px 16px;transition:background .1s" 
+           onmouseover="this.style.background='#f4f8ff'" onmouseout="this.style.background=''"
+      >
+        <span style="font-size:12.5px;color:#0d1e3a;display:flex;align-items:center;gap:5px">
+          <span>${ap.e}</span><span>${ap.n}</span>
+        </span>
+        <span style="text-align:center">
+          <input type="number" id="pot_${idx}" value="${ap.w}" min="1" step="1"
+            style="width:72px;padding:5px 8px;border:1px solid #c8daf0;border-radius:6px;font-size:12px;text-align:center;color:#0d2d6b"
+            oninput="calcSimulador()">
+        </span>
+        <span style="text-align:center">
+          <input type="number" id="hrs_${idx}" value="${ap.h}" min="0" max="24" step="0.1"
+            style="width:68px;padding:5px 8px;border:1px solid #c8daf0;border-radius:6px;font-size:12px;text-align:center;color:#0d2d6b"
+            oninput="calcSimulador()">
+        </span>
+        <span id="kwh_${idx}" style="font-family:'Courier New',monospace;font-size:12.5px;color:#0d2d6b;font-weight:700;text-align:right;padding-right:8px">0,0</span>
+        <span id="brl_${idx}" style="font-family:'Courier New',monospace;font-size:12.5px;color:#1a52b8;font-weight:700;text-align:right">R$ 0,00</span>
+      </div>`;
+    });
+  });
+  cont.innerHTML = html;
+  calcSimulador();
+}
+
+function calcSimulador(){
+  const tarifa = parseFloat(document.getElementById('tarifaKwh').value)||0.90;
+  let totalKwh = 0;
+  const catTotais = {};
+
+  APARELHOS.forEach((ap,idx)=>{
+    const pot = parseFloat(document.getElementById('pot_'+idx)?.value)||0;
+    const hrs = parseFloat(document.getElementById('hrs_'+idx)?.value)||0;
+    const kwh = (pot * hrs * 30) / 1000;
+    const brl = kwh * tarifa;
+    totalKwh += kwh;
+    catTotais[ap.cat] = (catTotais[ap.cat]||0) + kwh;
+
+    const kwhEl = document.getElementById('kwh_'+idx);
+    const brlEl = document.getElementById('brl_'+idx);
+    if(kwhEl) kwhEl.textContent = kwh.toFixed(1).replace('.',',');
+    if(brlEl) brlEl.textContent = 'R$ '+brl.toFixed(2).replace('.',',');
+  });
+
+  const totalBrl = totalKwh * tarifa;
+  const totalDiario = totalBrl / 30;
+  document.getElementById('totalKwh').textContent = totalKwh.toFixed(1).replace('.',',');
+  document.getElementById('totalReais').textContent = totalBrl.toFixed(2).replace('.',',');
+  document.getElementById('totalDiario').textContent = totalDiario.toFixed(2).replace('.',',');
+
+  // barras de categoria
+  const catBars = document.getElementById('catBars');
+  const maxCat = Math.max(...Object.values(catTotais),1);
+  catBars.innerHTML = Object.entries(catTotais)
+    .sort((a,b)=>b[1]-a[1])
+    .filter(([,v])=>v>0)
+    .map(([cat,kwh])=>{
+      const pct = (kwh/totalKwh*100)||0;
+      const cor = CAT_COLORS[cat]||'#fff';
+      const brl2 = (kwh*tarifa).toFixed(2).replace('.',',');
+      return `<div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;color:rgba(255,255,255,.6);width:88px;flex-shrink:0">${cat}</span>
+        <div style="flex:1;height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden">
+          <div style="width:${pct.toFixed(1)}%;height:100%;background:${cor};border-radius:3px;opacity:.9"></div>
+        </div>
+        <span style="font-size:10px;color:rgba(255,255,255,.75);width:54px;text-align:right;font-family:monospace">${pct.toFixed(0)}%</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.9);width:72px;text-align:right;font-family:monospace">R$ ${brl2}</span>
+      </div>`;
+    }).join('');
+}
+
+// inicializa ao trocar de aba
+const _origSwitch = switchTab;
+let _simBuilt = false;
+const _realSwitch = switchTab;
+// override switchTab to init simulator
+window.switchTab = function(name){
+  _realSwitch(name);
+  if(name==='simulador' && !_simBuilt){ buildSimulador(); _simBuilt=true; }
+};
+
 </script>
 </html>

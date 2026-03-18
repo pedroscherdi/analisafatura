@@ -671,8 +671,8 @@ function extrair(t){
     sub_tax:         money([/\bSUB_TAX\b|Subtribut[^\d]*([\d\.]+,\d{2})/i]),
     cip:             money([/\bCIP\b[^\d]*([\d\.]+,\d{2})/i,/Ilumina[çc][aã]o P[úu]blica[^\d]*([\d\.]+,\d{2})/i]),
     loc_equip:       money([/Loca[çc][aã]o\s+(?:de\s+)?Equipamento[^\d]*([\d\.]+,\d{2})/i]),
-    multa:           money([/MULTA CONTA ANTERIOR\s+([\d\.]+,\d{2})/i,/MULTA CONTA ANTERIOR[^\d]{0,25}?([\d\.]+,\d{2})/i,/(?:Multa|MULTA)[^\d]{0,25}?([\d\.]+,\d{2})/i]),
-    juros:           money([/JUROS CONTA ANTERIOR\s+([\d\.]+,\d{2})/i,/JUROS CONTA ANTERIOR[^\d]{0,25}?([\d\.]+,\d{2})/i,/(?:Juros|JUROS)[^\d]{0,25}?([\d\.]+,\d{2})/i]),
+    multa:           money([/MULTA\s+CONTA\s+ANTERIOR\s+([\d\.]+,\d{2})/i,/MULTA\s+(?:POR\s+)?(?:ATRASO|MORA)[^\d]{0,20}([\d\.]+,\d{2})/i,/(?:Encargo\s+)?MULTA\s+MORAT[OÓ]RIA[^\d]{0,20}([\d\.]+,\d{2})/i]),
+    juros:           money([/JUROS\s+CONTA\s+ANTERIOR\s+([\d\.]+,\d{2})/i,/JUROS\s+(?:DE\s+)?(?:MORA|MORAT[OÓ]RIOS?|ATRASO)[^\d]{0,20}([\d\.]+,\d{2})/i,/(?:Encargo\s+)?JUROS\s+MORAT[OÓ]RIOS?[^\d]{0,20}([\d\.]+,\d{2})/i]),
     correcao:        money([/(?:CORRECAO MONETARIA|AtualizMon|Atualiza[çc][aã]o Monet[aá]ria|Corre[çc][aã]o Monet[aá]ria)[^\d]{0,25}?([\d\.]+,\d{2})/i]),
     multa_cap_emerg: money([/Multa\s+(?:Cap\.?\s*Emerg|Capac\.?\s*Emerg)[^\d]*([\d\.]+,\d{2})/i]),
     cap_emergencial: money([/Capacidade\s+Emergencial[^\d]*([\d\.]+,\d{2})/i,/\bCapEmergencial\b[^\d]*([\d\.]+,\d{2})/i]),
@@ -1273,22 +1273,27 @@ function renderCampos(d){
     rVal+=f('Adicional Vermelho 1',M(d.val.adicional_verm1),'alert','adicional_verm1');
     rVal+=f('Adicional Vermelho 2',M(d.val.adicional_verm2),'alert','adicional_verm2');
   }
-  rVal+=sep('Encargos');
-  rVal+=f('CIP Municipal',M(d.val.cip),'money','cip');
-  rVal+=f('Locação de Equipamento',M(d.val.loc_equip),'money','loc_equip');
-  rVal+=f('ESS',M(d.val.ess),'money','ess');
-  rVal+=f('ERS',M(d.val.ers),'money','ers');
-  rVal+=f('PROINFA',M(d.val.proinfa),'money','proinfa');
-  rVal+=f('CDE',M(d.val.cde),'money','cde');
+  const _temEncargos=d.val.cip||d.val.loc_equip||d.val.ess||d.val.ers||d.val.proinfa||d.val.cde;
+  if(_temEncargos){
+    rVal+=sep('Encargos');
+    rVal+=f('CIP Municipal',M(d.val.cip),'money','cip');
+    rVal+=f('Locação de Equipamento',M(d.val.loc_equip),'money','loc_equip');
+    rVal+=f('ESS',M(d.val.ess),'money','ess');
+    rVal+=f('ERS',M(d.val.ers),'money','ers');
+    rVal+=f('PROINFA',M(d.val.proinfa),'money','proinfa');
+    rVal+=f('CDE',M(d.val.cde),'money','cde');
+  }
   if(d.val.cap_emergencial||d.val.multa_cap_emerg){
     rVal+=sep('Capacidade Emergencial');
     rVal+=f('Capacidade Emergencial',M(d.val.cap_emergencial),'warn','cap_emergencial');
     rVal+=f('Multa Cap. Emergencial',M(d.val.multa_cap_emerg),'alert','multa_cap_emerg');
   }
-  rVal+=sep('Atrasos');
-  rVal+=f('Multa por atraso',M(d.val.multa),'alert','multa');
-  rVal+=f('Juros moratórios',M(d.val.juros),'alert','juros');
-  rVal+=f('Atualização monetária',M(d.val.correcao),'money','correcao');
+  if(d.val.multa||d.val.juros||d.val.correcao){
+    rVal+=sep('Atrasos');
+    rVal+=f('Multa por atraso',M(d.val.multa),'alert','multa');
+    rVal+=f('Juros moratórios',M(d.val.juros),'alert','juros');
+    rVal+=f('Atualização monetária',M(d.val.correcao),'money','correcao');
+  }
   if(d.val.cred_sub_tax||d.val.sub_tax){
     rVal+=sep('Ajustes tributários');
     rVal+=f('CRED_SUB_TAX',M(d.val.cred_sub_tax),'ok','cred_sub_tax');
